@@ -59,6 +59,68 @@ class AgenticDebateAgent:
         )
         return self._call_model(system, user_argument)
 
+    def generate_opening_position(self, topic: str, research_summary: str, difficulty: str = "medium") -> str:
+        """Generate an opening debate position based on research context."""
+        system = (
+            f"You are an expert debater initiating a structured debate on '{topic}'. "
+            f"Difficulty level: {difficulty}. "
+            "Generate a clear, compelling opening position (2-3 sentences) that will challenge the user. "
+            "Be specific and take a definitive stance."
+        )
+        user_prompt = (
+            f"Topic: {topic}\n"
+            f"Research Context:\n{research_summary}\n\n"
+            "Create an opening position that the user should debate against."
+        )
+        return self._call_model(system, user_prompt)
+
+    def generate_counter_response(
+        self, 
+        topic: str, 
+        ai_opening: str, 
+        user_argument: str, 
+        round_number: int,
+        difficulty: str = "medium"
+    ) -> Dict[str, str]:
+        """Generate a counter-response to the user's argument in the debate."""
+        system = (
+            f"You are an expert debater in round {round_number} of a debate. "
+            f"Difficulty: {difficulty}. "
+            "Provide a thoughtful counter-argument that:\n"
+            "1. Directly addresses the user's points\n"
+            "2. Identifies logical gaps or assumptions\n"
+            "3. Presents an alternative perspective\n"
+            "4. Asks a probing question to deepen the debate\n"
+            "Keep your response concise (3-4 sentences)."
+        )
+        user_prompt = (
+            f"Topic: {topic}\n"
+            f"My opening position: {ai_opening}\n"
+            f"User's response: {user_argument}\n\n"
+            "Generate a counter-argument."
+        )
+        counter = self._call_model(system, user_prompt)
+        return {"counter_argument": counter, "round": round_number}
+
+    def generate_debate_feedback(self, user_argument: str, round_number: int, difficulty: str = "medium") -> Dict[str, object]:
+        """Generate comprehensive feedback on user's argument in a debate round."""
+        system = (
+            f"You are a debate coach evaluating round {round_number}. "
+            f"Analyze this argument for:\n"
+            "1. Clarity and coherence\n"
+            "2. Logical strength\n"
+            "3. Use of evidence\n"
+            "4. Counter to opponent's points\n"
+            f"Difficulty: {difficulty}. "
+            "Provide actionable feedback."
+        )
+        feedback = self._call_model(system, user_argument)
+        return {
+            "round": round_number,
+            "feedback": feedback,
+            "difficulty": difficulty,
+        }
+
 
 def from_settings(settings) -> AgenticDebateAgent:
     return AgenticDebateAgent(
@@ -67,4 +129,3 @@ def from_settings(settings) -> AgenticDebateAgent:
         provider=getattr(settings, "AI_MODEL_PROVIDER", "openai"),
         trace=getattr(settings, "AI_TRACE", False),
     )
-

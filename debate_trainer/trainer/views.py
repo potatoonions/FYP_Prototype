@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from typing import Any, Dict
 
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -9,9 +10,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.views.decorators.http import require_GET, require_http_methods
 
-from .models import DebateSession
+from .models import DebateSession, DebateRound
 from .services.agent import from_settings
 from .services.analysis import analyze_argument
+from .services.research import get_research_context
+from .debate_chat import debate_chat_view
 
 
 def _json_error(message: str, status: int = 400) -> JsonResponse:
@@ -474,4 +477,238 @@ def session_history(request: HttpRequest) -> JsonResponse:
         for s in sessions
     ]
     return JsonResponse({"sessions": data})
+
+
+# ============================================================================
+# Multi-turn Debate Flow Endpoints
+# ============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def start_debate(request: HttpRequest) -> JsonResponse:
+    """Start a new multi-turn debate with AI research and opening position."""
+    try:
+        payload: Dict[str, Any] = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return _json_error("Invalid JSON payload")
+
+    topic = payload.get("topic")
+    user_name = payload.get("user_name") or "anonymous"
+    difficulty = payload.get("difficulty") or "medium"
+
+    if not topic:
+        return _json_error("`topic` is required")
+
+    # Create a unique session ID
+    session_id = str(uuid.uuid4())
+
+    try:
+        # Fetch research on the topic
+        research = get_research_context(topic, max_results=5)
+        research_summary = research.get("summary", "")
+
+        # Generate AI's opening position
+        agent = from_settings(settings)
+        ai_position = agent.generate_opening_position(topic, research_summary, difficulty)
+
+        # Create debate round record
+        debate_round = DebateRound.objects.create(
+            session_id=session_id,
+            user_name=user_name,
+            topic=topic,
+            ai_position=ai_position,
+            research_summary=research,
+            round_type="ai_opening",
+            difficulty=difficulty,
+            conversation=[
+                {
+                    "role": "ai",
+                    "content": ai_position,
+                    "round": 1,
+                    "type": "opening"
+                }
+            ],
+        )
+
+        response = {
+            "session_id": session_id,
+            "topic": topic,
+            "ai_opening_position": ai_position,
+            "research_context": {
+                "papers_found": research.get("papers_found", 0),
+                "summary": research_summary,
+            },
+            "difficulty": difficulty,
+            "current_round": 1,
+        }
+        return JsonResponse(response)
+
+    except Exception as e:
+        return _json_error(f"Error starting debate: {str(e)}")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def submit_user_response(request: HttpRequest) -> JsonResponse:
+    """Submit user response and get AI counter-argument."""
+    try:
+        payload: Dict[str, Any] = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return _json_error("Invalid JSON payload")
+
+    session_id = payload.get("session_id")
+    user_response = payload.get("response")
+
+    if not session_id or not user_response:
+        return _json_error("`session_id` and `response` are required")
+
+    try:
+        # Get the debate round
+        debate_round = DebateRound.objects.get(session_id=session_id)
+
+        if not debate_round.is_active:
+            return _json_error("Debate session has ended")
+
+        # Analyze user's argument
+        analysis = analyze_argument(user_response).as_dict()
+
+        # Add user response to conversation
+        current_round = debate_round.current_round
+        debate_round.conversation.append({
+            "role": "user",
+            "content": user_response,
+            "round": current_round,
+            "analysis": analysis,
+        })
+
+        # Generate AI counter-argument
+        agent = from_settings(settings)
+        counter_response = agent.generate_counter_response(
+            debate_round.topic,
+            debate_round.ai_position,
+            user_response,
+            current_round,
+            debate_round.difficulty
+        )
+
+        # Get feedback on user's argument
+        feedback = agent.generate_debate_feedback(
+            user_response,
+            current_round,
+            debate_round.difficulty
+        )
+
+        # Add AI counter to conversation
+        debate_round.conversation.append({
+            "role": "ai",
+            "content": counter_response["counter_argument"],
+            "round": current_round + 1,
+            "type": "counter"
+        })
+
+        # Store feedback and scores
+        debate_round.ai_feedbacks[str(current_round)] = feedback
+        debate_round.scores[str(current_round)] = analysis["score"]
+
+        # Update round
+        debate_round.current_round = current_round + 1
+        debate_round.round_type = "ai_counter"
+        debate_round.save()
+
+        # Calculate running average score
+        scores = [float(s) for s in debate_round.scores.values()]
+        overall_score = round(sum(scores) / len(scores) * 100, 1) if scores else 0.0
+        debate_round.overall_score = overall_score
+        debate_round.save()
+
+        response = {
+            "session_id": session_id,
+            "round": current_round,
+            "user_analysis": analysis,
+            "ai_counter_argument": counter_response["counter_argument"],
+            "coach_feedback": feedback["feedback"],
+            "current_score": round(analysis["score"] * 100, 1),
+            "overall_score": overall_score,
+            "next_round": current_round + 1,
+        }
+        return JsonResponse(response)
+
+    except DebateRound.DoesNotExist:
+        return _json_error("Debate session not found", status=404)
+    except Exception as e:
+        return _json_error(f"Error processing response: {str(e)}")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def end_debate(request: HttpRequest) -> JsonResponse:
+    """End a debate session and get final summary."""
+    try:
+        payload: Dict[str, Any] = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return _json_error("Invalid JSON payload")
+
+    session_id = payload.get("session_id")
+
+    if not session_id:
+        return _json_error("`session_id` is required")
+
+    try:
+        debate_round = DebateRound.objects.get(session_id=session_id)
+        debate_round.is_active = False
+        debate_round.save()
+
+        # Prepare final summary
+        response = {
+            "session_id": session_id,
+            "topic": debate_round.topic,
+            "user_name": debate_round.user_name,
+            "total_rounds": debate_round.current_round - 1,
+            "overall_score": debate_round.overall_score,
+            "difficulty": debate_round.difficulty,
+            "conversation_length": len(debate_round.conversation),
+            "research_used": {
+                "papers_found": debate_round.research_summary.get("papers_found", 0),
+                "sources": len(debate_round.research_summary.get("papers", [])),
+            }
+        }
+        return JsonResponse(response)
+
+    except DebateRound.DoesNotExist:
+        return _json_error("Debate session not found", status=404)
+    except Exception as e:
+        return _json_error(f"Error ending debate: {str(e)}")
+
+
+@require_GET
+def get_debate_history(request: HttpRequest) -> JsonResponse:
+    """Get debate round history for a session."""
+    session_id = request.GET.get("session_id")
+
+    if not session_id:
+        return _json_error("`session_id` is required")
+
+    try:
+        debate_round = DebateRound.objects.get(session_id=session_id)
+
+        response = {
+            "session_id": session_id,
+            "topic": debate_round.topic,
+            "user_name": debate_round.user_name,
+            "difficulty": debate_round.difficulty,
+            "overall_score": debate_round.overall_score,
+            "total_rounds": debate_round.current_round - 1,
+            "conversation": debate_round.conversation,
+            "feedbacks": debate_round.ai_feedbacks,
+            "scores": {k: round(float(v) * 100, 1) for k, v in debate_round.scores.items()},
+            "is_active": debate_round.is_active,
+            "created_at": debate_round.created_at.isoformat(),
+        }
+        return JsonResponse(response)
+
+    except DebateRound.DoesNotExist:
+        return _json_error("Debate session not found", status=404)
+    except Exception as e:
+        return _json_error(f"Error retrieving history: {str(e)}")
+
 
