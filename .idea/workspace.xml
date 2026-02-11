@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="a2874072-81c5-4c78-9a61-6cdd5c748a1f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/DEBATE_AI_SETUP.md" beforeDir="false" afterPath="$PROJECT_DIR$/DEBATE_AI_SETUP.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PYTHONANYWHERE_DEPLOYMENT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/QUICK_REFERENCE.md" beforeDir="false" afterPath="$PROJECT_DIR$/QUICK_REFERENCE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/db.sqlite3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/debate_trainer/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/debate_trainer/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/debate_trainer/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/debate_trainer/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/trainer/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/trainer/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/trainer/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/trainer/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/trainer/services/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/trainer/services/agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/trainer/services/research.py" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/trainer/services/research.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/trainer/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/trainer/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debate_trainer/trainer/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/debate_trainer/trainer/views.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
+  <component name="ProjectId" id="3776KdC12nHF3ilkJmm4wXptiTP" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Problems",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.2",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-26cb7f24e5b0-intellij.indexing.shared.core-IU-253.29346.138" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="a2874072-81c5-4c78-9a61-6cdd5c748a1f" name="Changes" comment="" />
+      <created>1766241703987</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1766241703987</updated>
+      <workItem from="1766241711473" duration="30000" />
+      <workItem from="1770433347649" duration="14000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

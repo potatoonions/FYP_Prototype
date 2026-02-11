@@ -138,14 +138,23 @@ PythonAnywhere: https://KeithLoZeHui.pythonanywhere.com/debate/chat/
 
 ## 🔐 Environment Variables
 
-```bash
-# Required for AI features
-export AI_API_KEY="your-openai-api-key"
+You can use different AI providers. For your debate trainer, **Google Gemini is recommended**.
 
-# Optional
-export AI_MODEL_NAME="gpt-4o-mini"  # default
-export AI_MODEL_PROVIDER="openai"    # default
-export AI_TRACE="false"              # debug mode
+```bash
+# Required for AI features (example: Google Gemini API key)
+export AI_API_KEY="your-gemini-api-key"
+
+# Optional (defaults shown)
+# For Google Gemini (recommended in this FYP):
+export AI_MODEL_PROVIDER="google"
+export AI_MODEL_NAME="gemini-1.5-flash"
+
+# For OpenAI instead, you could use:
+# export AI_MODEL_PROVIDER="openai"
+# export AI_MODEL_NAME="gpt-4o-mini"
+
+# Enable extra logging of AI calls (0/1)
+export AI_TRACE="0"
 ```
 
 ---

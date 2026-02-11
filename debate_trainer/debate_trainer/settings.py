@@ -6,14 +6,21 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "dev-secret-key-change-me",
-)
-
+# Default to True for development, require explicit False for production
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in {"1", "true", "yes"}
+
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "dev-secret-key-change-me-in-production"
+    else:
+        raise ValueError("DJANGO_SECRET_KEY environment variable must be set in production")
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -102,4 +109,54 @@ AI_MODEL_PROVIDER = os.environ.get("AI_MODEL_PROVIDER", "openai")
 AI_MODEL_NAME = os.environ.get("AI_MODEL_NAME", "gpt-4o-mini")
 AI_API_KEY = os.environ.get("AI_API_KEY", "set-me")
 AI_TRACE = os.environ.get("AI_TRACE", "0") == "1"
+
+# Caching configuration
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "debate-trainer-cache",
+        "TIMEOUT": 300,  # 5 minutes default
+        "OPTIONS": {
+            "MAX_ENTRIES": 1000,
+        },
+    }
+}
+
+# Logging configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "trainer": {
+            "handlers": ["console"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+    },
+}
 

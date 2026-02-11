@@ -197,9 +197,23 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-2. **Set your OpenAI API key**:
+2. **Configure your AI provider (Gemini recommended)**  
+In this project, the agent already supports multiple providers (OpenAI, Google Gemini, Groq).  
+For your FYP debate trainer, the cheapest and simplest option is **Google Gemini**:
+
+```bash
+# Google Gemini (recommended)
+export AI_API_KEY="your-gemini-api-key"     # from Generative Language API
+export AI_MODEL_PROVIDER="google"
+export AI_MODEL_NAME="gemini-1.5-flash"
+```
+
+If you prefer to use OpenAI instead:
+
 ```bash
 export AI_API_KEY="your-openai-api-key"
+export AI_MODEL_PROVIDER="openai"
+export AI_MODEL_NAME="gpt-4o-mini"
 ```
 
 3. **Run the development server**:
