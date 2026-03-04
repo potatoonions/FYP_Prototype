@@ -12,9 +12,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.core.cache import cache
 
 from .models import DebateSession, DebateRound
-from .services.agent import from_settings
-from .services.analysis import analyze_argument, analyze_argument_detailed
-from .services.research import get_research_context, get_reference_sources
+from .services import from_settings, analyze_argument, analyze_argument_detailed, get_research_context, get_reference_sources
 from .validators import (
     validate_json_payload,
     validate_string_field,
@@ -141,8 +139,8 @@ def start_debate(request: HttpRequest) -> JsonResponse:
         if research is None:
             logger.info(f"Fetching research for topic: {topic}")
             research = get_research_context(topic, max_results=5)
-            # Cache for 5 minutes
-            cache.set(cache_key, research, timeout=300)
+            # Cache for 1 hour (research is expensive)
+            cache.set(cache_key, research, timeout=3600)
         else:
             logger.debug(f"Using cached research for topic: {topic}")
 
@@ -236,9 +234,13 @@ def submit_user_response(request: HttpRequest) -> JsonResponse:
         return error
 
     try:
-        # Get the debate round
+        # Get the debate round - fetch only needed fields for performance
         try:
-            debate_round = DebateRound.objects.get(session_id=session_id)
+            debate_round = DebateRound.objects.only(
+                'session_id', 'topic', 'ai_position', 'research_summary',
+                'current_round', 'difficulty', 'conversation', 'is_active',
+                'ai_feedbacks', 'scores', 'overall_score'
+            ).get(session_id=session_id)
         except DebateRound.DoesNotExist:
             logger.warning(f"Debate session not found: {session_id}")
             return _json_error("Debate session not found", status=404)
@@ -361,7 +363,10 @@ def end_debate(request: HttpRequest) -> JsonResponse:
 
     try:
         try:
-            debate_round = DebateRound.objects.get(session_id=session_id)
+            debate_round = DebateRound.objects.only(
+                'session_id', 'is_active', 'current_round', 'overall_score',
+                'topic', 'user_name', 'difficulty', 'conversation', 'research_summary'
+            ).get(session_id=session_id)
         except DebateRound.DoesNotExist:
             logger.warning(f"Attempted to end non-existent debate session: {session_id}")
             return _json_error("Debate session not found", status=404)
@@ -405,7 +410,11 @@ def get_debate_history(request: HttpRequest) -> JsonResponse:
 
     try:
         try:
-            debate_round = DebateRound.objects.get(session_id=session_id)
+            debate_round = DebateRound.objects.only(
+                'session_id', 'topic', 'user_name', 'difficulty',
+                'overall_score', 'current_round', 'conversation',
+                'ai_feedbacks', 'scores', 'is_active', 'created_at'
+            ).get(session_id=session_id)
         except DebateRound.DoesNotExist:
             logger.warning(f"History requested for non-existent session: {session_id}")
             return _json_error("Debate session not found", status=404)
