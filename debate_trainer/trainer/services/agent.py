@@ -153,36 +153,37 @@ class AgenticDebateAgent:
 
     def generate_counterargument(self, topic: str, user_argument: str, difficulty: str = "medium") -> Dict[str, str]:
         system = (
-            "You are a concise debate coach generating focused counterarguments. "
-            "Use clear logic, cite hypothetical evidence briefly, and suggest probing questions. "
+            "You are a debate coach. Generate a SHORT counterargument (max 80 words). "
+            "Be direct: 1 key rebuttal + 1 probing question. No fluff. "
             f"Difficulty: {difficulty}."
         )
         plan = (
             f"Topic: {topic}\nUser argument: {user_argument}\n"
-            "Draft a rebuttal that highlights logical gaps and offers an alternative framing."
+            "Rebuttal (80 words max):"
         )
         content = self._call_model(system, plan)
         return {"topic": topic, "counterargument": content, "difficulty": difficulty}
 
     def critique_and_feedback(self, user_argument: str) -> str:
         system = (
-            "You are an argument analyst. Provide concise feedback in three bullet points: "
-            "1) strongest element, 2) biggest logical vulnerability, 3) one improvement suggestion."
+            "You are an argument analyst. Give BRIEF feedback (max 60 words total):\n"
+            "• Strength: [1 sentence]\n"
+            "• Weakness: [1 sentence]\n"
+            "• Tip: [1 sentence]"
         )
         return self._call_model(system, user_argument)
 
     def generate_opening_position(self, topic: str, research_summary: str, difficulty: str = "medium") -> str:
         """Generate an opening debate position based on research context."""
         system = (
-            f"You are an expert debater initiating a structured debate on '{topic}'. "
-            f"Difficulty level: {difficulty}. "
-            "Generate a clear, compelling opening position (2-3 sentences) that will challenge the user. "
-            "Be specific and take a definitive stance."
+            f"You are a debater on '{topic}'. Difficulty: {difficulty}. "
+            "State your position in 2 sentences MAX (under 50 words). "
+            "Be bold and specific. No preamble."
         )
         user_prompt = (
             f"Topic: {topic}\n"
-            f"Research Context:\n{research_summary}\n\n"
-            "Create an opening position that the user should debate against."
+            f"Context: {research_summary[:300]}\n\n"
+            "Your position (50 words max):"
         )
         return self._call_model(system, user_prompt)
 
@@ -196,20 +197,15 @@ class AgenticDebateAgent:
     ) -> Dict[str, str]:
         """Generate a counter-response to the user's argument in the debate."""
         system = (
-            f"You are an expert debater in round {round_number} of a debate. "
-            f"Difficulty: {difficulty}. "
-            "Provide a thoughtful counter-argument that:\n"
-            "1. Directly addresses the user's points\n"
-            "2. Identifies logical gaps or assumptions\n"
-            "3. Presents an alternative perspective\n"
-            "4. Asks a probing question to deepen the debate\n"
-            "Keep your response concise (3-4 sentences)."
+            f"Round {round_number} debate. Difficulty: {difficulty}. "
+            "Reply in MAX 60 words: 1) Challenge their weakest point, "
+            "2) End with ONE sharp question. No fluff or greetings."
         )
         user_prompt = (
             f"Topic: {topic}\n"
-            f"My opening position: {ai_opening}\n"
-            f"User's response: {user_argument}\n\n"
-            "Generate a counter-argument."
+            f"My position: {ai_opening[:150]}\n"
+            f"They said: {user_argument}\n\n"
+            "Counter (60 words max):"
         )
         counter = self._call_model(system, user_prompt)
         return {"counter_argument": counter, "round": round_number}
@@ -217,14 +213,9 @@ class AgenticDebateAgent:
     def generate_debate_feedback(self, user_argument: str, round_number: int, difficulty: str = "medium") -> Dict[str, object]:
         """Generate comprehensive feedback on user's argument in a debate round."""
         system = (
-            f"You are a debate coach evaluating round {round_number}. "
-            f"Analyze this argument for:\n"
-            "1. Clarity and coherence\n"
-            "2. Logical strength\n"
-            "3. Use of evidence\n"
-            "4. Counter to opponent's points\n"
-            f"Difficulty: {difficulty}. "
-            "Provide actionable feedback."
+            f"Debate coach, round {round_number}. Give feedback in MAX 50 words:\n"
+            "✓ What worked | ✗ Fix this | → Next step\n"
+            f"Difficulty: {difficulty}."
         )
         feedback = self._call_model(system, user_argument)
         return {
@@ -245,30 +236,24 @@ class AgenticDebateAgent:
         """Generate a formal debate speech."""
         if speech_type == "substantive":
             system = (
-                f"You are an expert debater delivering a substantive speech on formal debate motion: '{motion}'.\n"
-                f"You are speaking for the {side.upper()} side.\n"
-                f"Your speech should:\n"
-                "1. Open with formal address (e.g., 'Honorable judges, worthy opposition')\n"
-                "2. Define key terms\n"
-                "3. Present 2-3 main arguments with evidence\n"
-                "4. Use logical connectives (firstly, secondly, therefore, etc.)\n"
-                "5. Conclude with a summary of your case\n"
-                f"Difficulty: {difficulty}.\n"
-                "Keep speech concise (aim for ~400 words to fit 7-8 minute delivery)."
+                f"Formal debate speech on: '{motion}'. Side: {side.upper()}.\n"
+                "Structure (MAX 200 words):\n"
+                "1. Brief formal opening\n"
+                "2. Define 1 key term\n"
+                "3. Present 2 arguments with evidence\n"
+                "4. Conclude\n"
+                f"Difficulty: {difficulty}. Be punchy, not verbose."
             )
-            prompt = f"Motion: {motion}\nSide: {side.upper()}\n\nDeliver your substantive speech."
+            prompt = f"Motion: {motion}\nSide: {side.upper()}\n\nSpeech (200 words max):"
         
         elif speech_type == "reply":
             system = (
-                f"You are an expert debater delivering a REPLY speech (rebuttal).\n"
-                f"Motion: '{motion}', Side: {side.upper()}\n"
-                "Your reply speech should:\n"
-                "1. Address the opponent's main arguments\n"
-                "2. Point out logical flaws or weak evidence\n"
-                "3. Reinforce your side's strongest points\n"
-                "4. DO NOT introduce new arguments\n"
-                "5. Conclude with why your side won the debate\n"
-                "Keep it focused and concise (~200 words for 4-minute delivery)."
+                f"REPLY speech (rebuttal). Motion: '{motion}', Side: {side.upper()}\n"
+                "MAX 120 words:\n"
+                "1. Attack opponent's weakest point\n"
+                "2. Defend your best argument\n"
+                "3. Conclude why you won\n"
+                "NO new arguments. Be sharp."
             )
             prev_speeches_text = ""
             if previous_speeches:
