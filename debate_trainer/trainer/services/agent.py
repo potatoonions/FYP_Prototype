@@ -38,6 +38,36 @@ class APITimeoutError(APIError):
     pass
 
 
+# AI Personality Modes
+AI_PERSONALITIES = {
+    "balanced": {
+        "name": "Balanced",
+        "description": "Fair and measured debate style",
+        "style": "You are a balanced, fair debater. Use measured language, acknowledge valid points from the opposition, and present logical arguments without aggression.",
+    },
+    "aggressive": {
+        "name": "Aggressive",
+        "description": "Sharp, direct attacks on weak points",
+        "style": "You are an aggressive debater. Be sharp, direct, and relentless in attacking weak points. Use strong language and rhetorical questions. Challenge every assumption.",
+    },
+    "diplomatic": {
+        "name": "Diplomatic",
+        "description": "Polite and respectful, seeks common ground",
+        "style": "You are a diplomatic debater. Be polite and respectful, acknowledge the opponent's perspective, seek common ground while firmly presenting your case. Use phrases like 'I understand your point, however...'",
+    },
+    "academic": {
+        "name": "Academic",
+        "description": "Evidence-focused, cites studies and data",
+        "style": "You are an academic debater. Focus heavily on evidence, cite studies and statistics (hypothetical if needed), use formal language, and structure arguments with clear premises and conclusions.",
+    },
+    "socratic": {
+        "name": "Socratic",
+        "description": "Questions everything, leads with inquiry",
+        "style": "You are a Socratic debater. Lead with probing questions, challenge assumptions through inquiry, make the opponent justify their reasoning. Ask 'why' and 'how do you know' frequently.",
+    },
+}
+
+
 class AgenticDebateAgent:
     """Multi-provider LLM agent for debate training."""
     
@@ -151,9 +181,11 @@ class AgenticDebateAgent:
             "present an alternative cause, and invite the opponent to justify their claims."
         )
 
-    def generate_counterargument(self, topic: str, user_argument: str, difficulty: str = "medium") -> Dict[str, str]:
+    def generate_counterargument(self, topic: str, user_argument: str, difficulty: str = "medium", personality: str = "balanced") -> Dict[str, str]:
+        style = AI_PERSONALITIES.get(personality, AI_PERSONALITIES["balanced"])["style"]
         system = (
-            "You are a debate coach. Generate a SHORT counterargument (max 80 words). "
+            f"{style} "
+            "Generate a SHORT counterargument (max 80 words). "
             "Be direct: 1 key rebuttal + 1 probing question. No fluff. "
             f"Difficulty: {difficulty}."
         )
@@ -162,7 +194,7 @@ class AgenticDebateAgent:
             "Rebuttal (80 words max):"
         )
         content = self._call_model(system, plan)
-        return {"topic": topic, "counterargument": content, "difficulty": difficulty}
+        return {"topic": topic, "counterargument": content, "difficulty": difficulty, "personality": personality}
 
     def critique_and_feedback(self, user_argument: str) -> str:
         system = (
@@ -173,10 +205,12 @@ class AgenticDebateAgent:
         )
         return self._call_model(system, user_argument)
 
-    def generate_opening_position(self, topic: str, research_summary: str, difficulty: str = "medium") -> str:
+    def generate_opening_position(self, topic: str, research_summary: str, difficulty: str = "medium", personality: str = "balanced") -> str:
         """Generate an opening debate position based on research context."""
+        style = AI_PERSONALITIES.get(personality, AI_PERSONALITIES["balanced"])["style"]
         system = (
-            f"You are a debater on '{topic}'. Difficulty: {difficulty}. "
+            f"{style} "
+            f"Topic: '{topic}'. Difficulty: {difficulty}. "
             "State your position in 2 sentences MAX (under 50 words). "
             "Be bold and specific. No preamble."
         )
@@ -193,10 +227,13 @@ class AgenticDebateAgent:
         ai_opening: str, 
         user_argument: str, 
         round_number: int,
-        difficulty: str = "medium"
+        difficulty: str = "medium",
+        personality: str = "balanced"
     ) -> Dict[str, str]:
         """Generate a counter-response to the user's argument in the debate."""
+        style = AI_PERSONALITIES.get(personality, AI_PERSONALITIES["balanced"])["style"]
         system = (
+            f"{style} "
             f"Round {round_number} debate. Difficulty: {difficulty}. "
             "Reply in MAX 60 words: 1) Challenge their weakest point, "
             "2) End with ONE sharp question. No fluff or greetings."
@@ -208,7 +245,7 @@ class AgenticDebateAgent:
             "Counter (60 words max):"
         )
         counter = self._call_model(system, user_prompt)
-        return {"counter_argument": counter, "round": round_number}
+        return {"counter_argument": counter, "round": round_number, "personality": personality}
 
     def generate_debate_feedback(self, user_argument: str, round_number: int, difficulty: str = "medium") -> Dict[str, object]:
         """Generate comprehensive feedback on user's argument in a debate round."""
@@ -231,11 +268,15 @@ class AgenticDebateAgent:
         speech_type: str,
         previous_speeches: list = None,
         opponent_position: str = None,
-        difficulty: str = "medium"
+        difficulty: str = "medium",
+        personality: str = "balanced"
     ) -> str:
         """Generate a formal debate speech."""
+        style = AI_PERSONALITIES.get(personality, AI_PERSONALITIES["balanced"])["style"]
+        
         if speech_type == "substantive":
             system = (
+                f"{style} "
                 f"Formal debate speech on: '{motion}'. Side: {side.upper()}.\n"
                 "Structure (MAX 200 words):\n"
                 "1. Brief formal opening\n"
@@ -248,6 +289,7 @@ class AgenticDebateAgent:
         
         elif speech_type == "reply":
             system = (
+                f"{style} "
                 f"REPLY speech (rebuttal). Motion: '{motion}', Side: {side.upper()}\n"
                 "MAX 120 words:\n"
                 "1. Attack opponent's weakest point\n"
@@ -334,6 +376,32 @@ class AgenticDebateAgent:
             "speech_type": speech_type,
             "side": side
         }
+
+    def suggest_rebuttals(self, opponent_argument: str, topic: str = "") -> Dict:
+        """Generate real-time rebuttal suggestions as user types."""
+        system = (
+            "You are a debate assistant. Given the opponent's argument, "
+            "suggest 3 SHORT rebuttal angles (max 15 words each). "
+            "Format: numbered list, no explanations."
+        )
+        prompt = (
+            f"Topic: {topic}\n"
+            f"Opponent says: {opponent_argument}\n\n"
+            "3 rebuttal angles (15 words each max):"
+        )
+        response = self._call_model(system, prompt, timeout=10)
+        
+        # Parse suggestions
+        suggestions = []
+        for line in response.strip().split('\n'):
+            line = line.strip()
+            if line and (line[0].isdigit() or line.startswith('-') or line.startswith('•')):
+                # Remove numbering/bullets
+                clean = line.lstrip('0123456789.-•) ').strip()
+                if clean:
+                    suggestions.append(clean)
+        
+        return {"suggestions": suggestions[:3], "opponent_argument": opponent_argument[:100]}
 
 
 def from_settings(settings) -> AgenticDebateAgent:

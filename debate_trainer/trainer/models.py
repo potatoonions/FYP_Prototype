@@ -189,6 +189,99 @@ class FormalDebateConfig(models.Model):
         }
 
 
+class UserProfile(models.Model):
+    """User profile for gamification - XP, levels, badges, streaks."""
+    
+    user_name = models.CharField(max_length=100, unique=True)
+    
+    # XP and leveling
+    xp = models.IntegerField(default=0)
+    level = models.IntegerField(default=1)
+    
+    # Stats
+    total_debates = models.IntegerField(default=0)
+    debates_won = models.IntegerField(default=0)
+    total_score = models.FloatField(default=0.0)
+    highest_score = models.FloatField(default=0.0)
+    
+    # Streaks
+    current_streak = models.IntegerField(default=0)
+    longest_streak = models.IntegerField(default=0)
+    last_debate_date = models.DateField(null=True, blank=True)
+    
+    # Badges (JSON list of badge IDs)
+    badges = models.JSONField(default=list)
+    
+    # Daily challenge
+    daily_challenge_completed = models.BooleanField(default=False)
+    daily_challenge_date = models.DateField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ["-xp"]
+        indexes = [
+            models.Index(fields=["-xp"]),
+            models.Index(fields=["user_name"]),
+        ]
+    
+    def __str__(self):
+        return f"{self.user_name} (Level {self.level}, {self.xp} XP)"
+    
+    @property
+    def average_score(self):
+        if self.total_debates == 0:
+            return 0.0
+        return round(self.total_score / self.total_debates, 1)
+    
+    @property
+    def win_rate(self):
+        if self.total_debates == 0:
+            return 0.0
+        return round((self.debates_won / self.total_debates) * 100, 1)
+    
+    @staticmethod
+    def xp_for_level(level):
+        """XP required to reach a level (exponential curve)."""
+        return int(100 * (level ** 1.5))
+    
+    def add_xp(self, amount):
+        """Add XP and handle level ups."""
+        self.xp += amount
+        # Check for level up
+        while self.xp >= self.xp_for_level(self.level + 1):
+            self.level += 1
+        self.save()
+        return self.level
+    
+    def check_and_award_badges(self):
+        """Check and award badges based on achievements."""
+        new_badges = []
+        
+        BADGE_DEFINITIONS = {
+            "first_debate": {"name": "First Steps", "condition": lambda p: p.total_debates >= 1},
+            "10_debates": {"name": "Debater", "condition": lambda p: p.total_debates >= 10},
+            "50_debates": {"name": "Veteran", "condition": lambda p: p.total_debates >= 50},
+            "first_win": {"name": "Victor", "condition": lambda p: p.debates_won >= 1},
+            "10_wins": {"name": "Champion", "condition": lambda p: p.debates_won >= 10},
+            "perfect_score": {"name": "Perfectionist", "condition": lambda p: p.highest_score >= 95},
+            "streak_3": {"name": "On Fire", "condition": lambda p: p.current_streak >= 3},
+            "streak_7": {"name": "Unstoppable", "condition": lambda p: p.longest_streak >= 7},
+            "level_5": {"name": "Rising Star", "condition": lambda p: p.level >= 5},
+            "level_10": {"name": "Master Debater", "condition": lambda p: p.level >= 10},
+        }
+        
+        for badge_id, badge_def in BADGE_DEFINITIONS.items():
+            if badge_id not in self.badges and badge_def["condition"](self):
+                self.badges.append(badge_id)
+                new_badges.append({"id": badge_id, "name": badge_def["name"]})
+        
+        if new_badges:
+            self.save()
+        return new_badges
+
+
 class FormalDebateSession(models.Model):
     """Tracks a formal debate competition."""
     
