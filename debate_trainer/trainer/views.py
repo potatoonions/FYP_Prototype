@@ -13,8 +13,8 @@ from django.core.cache import cache
 
 from .models import DebateSession, DebateRound
 from .services.agent import from_settings
-from .services.analysis import analyze_argument
-from .services.research import get_research_context
+from .services.analysis import analyze_argument, analyze_argument_detailed
+from .services.research import get_research_context, get_reference_sources
 from .validators import (
     validate_json_payload,
     validate_string_field,
@@ -146,11 +146,27 @@ def start_debate(request: HttpRequest) -> JsonResponse:
         else:
             logger.debug(f"Using cached research for topic: {topic}")
 
+        # Get curated reference sources for the topic
+        reference_sources = get_reference_sources(topic)
+        
         research_summary = research.get("summary", "")
 
-        # Generate AI's opening position
+        # Generate AI's opening position with sources
         agent = from_settings(settings)
-        ai_position = agent.generate_opening_position(topic, research_summary, difficulty)
+        ai_position_result = agent.generate_opening_position(
+            topic, 
+            research_summary, 
+            difficulty,
+            sources=reference_sources
+        )
+        
+        # Handle both old string return and new dict return for backwards compatibility
+        if isinstance(ai_position_result, dict):
+            ai_position = ai_position_result.get("text", str(ai_position_result))
+            sources_used = ai_position_result.get("sources_used", reference_sources)
+        else:
+            ai_position = ai_position_result
+            sources_used = reference_sources
 
         # Create debate round record
         debate_round = DebateRound.objects.create(
@@ -166,10 +182,15 @@ def start_debate(request: HttpRequest) -> JsonResponse:
                     "role": "ai",
                     "content": ai_position,
                     "round": 1,
-                    "type": "opening"
+                    "type": "opening",
+                    "sources": sources_used
                 }
             ],
         )
+        
+        # Store reference sources in the session for later use
+        debate_round.research_summary["reference_sources"] = reference_sources
+        debate_round.save()
 
         logger.info(f"Started debate session {session_id} for user {user_name} on topic {topic}")
 
@@ -181,6 +202,7 @@ def start_debate(request: HttpRequest) -> JsonResponse:
                 "papers_found": research.get("papers_found", 0),
                 "summary": research_summary,
             },
+            "reference_sources": sources_used,
             "difficulty": difficulty,
             "current_round": 1,
         }
@@ -227,6 +249,9 @@ def submit_user_response(request: HttpRequest) -> JsonResponse:
 
         # Analyze user's argument
         analysis = analyze_argument(user_response).as_dict()
+        
+        # Perform detailed analysis for highlighting issues
+        detailed_analysis = analyze_argument_detailed(user_response).as_dict()
 
         # Add user response to conversation
         current_round = debate_round.current_round
@@ -235,16 +260,21 @@ def submit_user_response(request: HttpRequest) -> JsonResponse:
             "content": user_response,
             "round": current_round,
             "analysis": analysis,
+            "detailed_analysis": detailed_analysis,
         })
 
-        # Generate AI counter-argument
+        # Get reference sources from the session
+        reference_sources = debate_round.research_summary.get("reference_sources", [])
+
+        # Generate AI counter-argument with sources
         agent = from_settings(settings)
         counter_response = agent.generate_counter_response(
             debate_round.topic,
             debate_round.ai_position,
             user_response,
             current_round,
-            debate_round.difficulty
+            debate_round.difficulty,
+            sources=reference_sources
         )
 
         # Get feedback on user's argument
@@ -253,13 +283,26 @@ def submit_user_response(request: HttpRequest) -> JsonResponse:
             current_round,
             debate_round.difficulty
         )
+        
+        # Get AI-powered issue analysis (optional - can be slow)
+        ai_critique = {}
+        try:
+            ai_critique = agent.analyze_argument_issues(user_response, debate_round.topic)
+        except Exception as e:
+            logger.debug(f"AI critique failed: {str(e)}")
+            ai_critique = {"ai_issues": [], "has_issues": False}
+
+        # Extract counter argument text (handle both dict and string returns)
+        counter_text = counter_response.get("counter_argument", str(counter_response)) if isinstance(counter_response, dict) else counter_response
+        sources_used = counter_response.get("sources_used", reference_sources) if isinstance(counter_response, dict) else reference_sources
 
         # Add AI counter to conversation
         debate_round.conversation.append({
             "role": "ai",
-            "content": counter_response["counter_argument"],
+            "content": counter_text,
             "round": current_round + 1,
-            "type": "counter"
+            "type": "counter",
+            "sources": sources_used
         })
 
         # Store feedback and scores
@@ -285,11 +328,14 @@ def submit_user_response(request: HttpRequest) -> JsonResponse:
             "session_id": session_id,
             "round": current_round,
             "user_analysis": analysis,
-            "ai_counter_argument": counter_response["counter_argument"],
+            "detailed_analysis": detailed_analysis,
+            "ai_critique": ai_critique,
+            "ai_counter_argument": counter_text,
             "coach_feedback": feedback["feedback"],
             "current_score": round(analysis["score"] * 100, 1),
             "overall_score": overall_score,
             "next_round": current_round + 1,
+            "sources_cited": sources_used,
         }
         return JsonResponse(response)
 

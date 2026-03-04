@@ -205,21 +205,50 @@ class AgenticDebateAgent:
         )
         return self._call_model(system, user_argument)
 
-    def generate_opening_position(self, topic: str, research_summary: str, difficulty: str = "medium", personality: str = "balanced") -> str:
-        """Generate an opening debate position based on research context."""
+    def _format_sources_for_prompt(self, sources: list) -> str:
+        """Format sources for inclusion in prompts."""
+        if not sources:
+            return ""
+        source_text = "Available sources to cite:\n"
+        for i, source in enumerate(sources[:3], 1):
+            source_text += f"{i}. {source.get('title', 'Unknown')} ({source.get('year', 'N/A')}) - {source.get('type', 'source')}\n"
+        return source_text
+
+    def generate_opening_position(self, topic: str, research_summary: str, difficulty: str = "medium", personality: str = "balanced", sources: list = None) -> Dict[str, object]:
+        """Generate an opening debate position based on research context with source citations."""
         style = AI_PERSONALITIES.get(personality, AI_PERSONALITIES["balanced"])["style"]
+        sources = sources or []
+        source_instruction = ""
+        if sources:
+            source_instruction = (
+                "When making claims, reference which source supports your point using format: "
+                "'According to [Source Title]...' or 'Research from [Source] shows...'. "
+                "Include at least one source reference. "
+            )
+        
         system = (
             f"{style} "
             f"Topic: '{topic}'. Difficulty: {difficulty}. "
-            "State your position in 2 sentences MAX (under 50 words). "
+            f"{source_instruction}"
+            "State your position in 3-4 sentences MAX (under 70 words). "
             "Be bold and specific. No preamble."
         )
+        sources_text = self._format_sources_for_prompt(sources)
         user_prompt = (
             f"Topic: {topic}\n"
-            f"Context: {research_summary[:300]}\n\n"
-            "Your position (50 words max):"
+            f"Context: {research_summary[:300]}\n"
+            f"{sources_text}\n"
+            "Your position (70 words max, cite sources):"
         )
-        return self._call_model(system, user_prompt)
+        response = self._call_model(system, user_prompt)
+        
+        # Return structured response with both text and cited sources
+        return {
+            "text": response,
+            "sources_used": sources[:3] if sources else [],
+            "personality": personality,
+            "difficulty": difficulty
+        }
 
     def generate_counter_response(
         self, 
@@ -228,24 +257,41 @@ class AgenticDebateAgent:
         user_argument: str, 
         round_number: int,
         difficulty: str = "medium",
-        personality: str = "balanced"
-    ) -> Dict[str, str]:
-        """Generate a counter-response to the user's argument in the debate."""
+        personality: str = "balanced",
+        sources: list = None
+    ) -> Dict[str, object]:
+        """Generate a counter-response to the user's argument in the debate with source citations."""
         style = AI_PERSONALITIES.get(personality, AI_PERSONALITIES["balanced"])["style"]
+        sources = sources or []
+        source_instruction = ""
+        if sources:
+            source_instruction = (
+                "When making factual claims, reference sources using format: "
+                "'According to [Source]...' or 'As [Source] demonstrates...'. "
+            )
+        
         system = (
             f"{style} "
             f"Round {round_number} debate. Difficulty: {difficulty}. "
-            "Reply in MAX 60 words: 1) Challenge their weakest point, "
+            f"{source_instruction}"
+            "Reply in MAX 80 words: 1) Challenge their weakest point with evidence, "
             "2) End with ONE sharp question. No fluff or greetings."
         )
+        sources_text = self._format_sources_for_prompt(sources)
         user_prompt = (
             f"Topic: {topic}\n"
             f"My position: {ai_opening[:150]}\n"
-            f"They said: {user_argument}\n\n"
-            "Counter (60 words max):"
+            f"They said: {user_argument}\n"
+            f"{sources_text}\n"
+            "Counter (80 words max, cite sources if making factual claims):"
         )
         counter = self._call_model(system, user_prompt)
-        return {"counter_argument": counter, "round": round_number, "personality": personality}
+        return {
+            "counter_argument": counter, 
+            "round": round_number, 
+            "personality": personality,
+            "sources_used": sources[:3] if sources else []
+        }
 
     def generate_debate_feedback(self, user_argument: str, round_number: int, difficulty: str = "medium") -> Dict[str, object]:
         """Generate comprehensive feedback on user's argument in a debate round."""
@@ -402,6 +448,85 @@ class AgenticDebateAgent:
                     suggestions.append(clean)
         
         return {"suggestions": suggestions[:3], "opponent_argument": opponent_argument[:100]}
+
+    def analyze_argument_issues(self, argument: str, topic: str = "") -> Dict:
+        """
+        AI-powered analysis to identify fallacies, weak points, and unsupported claims.
+        Returns detailed critique with specific issues highlighted.
+        """
+        system = (
+            "You are a debate coach analyzing an argument for logical issues. "
+            "Identify specific problems in the argument. For EACH issue found, provide:\n"
+            "1. The exact quote/phrase that has the issue\n"
+            "2. The type of issue (fallacy, weak argument, or unsupported claim)\n"
+            "3. A brief explanation of why it's problematic\n"
+            "4. A specific suggestion for improvement\n\n"
+            "Format your response as:\n"
+            "ISSUE 1:\n"
+            "- Quote: \"[exact text]\"\n"
+            "- Type: [Fallacy/Weak Argument/Unsupported Claim]\n"
+            "- Problem: [explanation]\n"
+            "- Fix: [suggestion]\n\n"
+            "If the argument is strong, say 'NO MAJOR ISSUES FOUND' and list 1-2 strengths.\n"
+            "Be thorough but fair. Maximum 4 issues."
+        )
+        prompt = (
+            f"Topic: {topic}\n\n"
+            f"Argument to analyze:\n\"{argument}\"\n\n"
+            "Analyze this argument for fallacies, weak points, and unsupported claims:"
+        )
+        
+        response = self._call_model(system, prompt, timeout=20)
+        
+        # Parse the AI response into structured issues
+        issues = []
+        current_issue = {}
+        
+        for line in response.split('\n'):
+            line = line.strip()
+            if line.startswith('ISSUE') or line.startswith('Issue'):
+                if current_issue:
+                    issues.append(current_issue)
+                current_issue = {}
+            elif line.startswith('- Quote:') or line.startswith('Quote:'):
+                quote = line.split(':', 1)[1].strip().strip('"\'')
+                current_issue['matched_text'] = quote
+            elif line.startswith('- Type:') or line.startswith('Type:'):
+                issue_type = line.split(':', 1)[1].strip().lower()
+                if 'fallacy' in issue_type:
+                    current_issue['issue_type'] = 'fallacy'
+                elif 'weak' in issue_type:
+                    current_issue['issue_type'] = 'weak_argument'
+                else:
+                    current_issue['issue_type'] = 'unsupported_claim'
+                current_issue['name'] = line.split(':', 1)[1].strip()
+            elif line.startswith('- Problem:') or line.startswith('Problem:'):
+                current_issue['description'] = line.split(':', 1)[1].strip()
+            elif line.startswith('- Fix:') or line.startswith('Fix:'):
+                current_issue['suggestion'] = line.split(':', 1)[1].strip()
+        
+        if current_issue and 'matched_text' in current_issue:
+            issues.append(current_issue)
+        
+        # Find positions in original text
+        for issue in issues:
+            if 'matched_text' in issue:
+                pos = argument.lower().find(issue['matched_text'].lower()[:30])
+                if pos != -1:
+                    issue['position'] = {'start': pos, 'end': pos + len(issue.get('matched_text', ''))}
+                else:
+                    issue['position'] = {'start': 0, 'end': 0}
+                issue['severity'] = 'high' if issue.get('issue_type') == 'fallacy' else 'medium'
+        
+        # Determine if no issues found
+        no_issues = 'no major issues' in response.lower() or 'no issues found' in response.lower()
+        
+        return {
+            "ai_issues": issues[:4],  # Limit to 4 issues
+            "raw_analysis": response,
+            "has_issues": not no_issues and len(issues) > 0,
+            "argument_preview": argument[:100] + "..." if len(argument) > 100 else argument
+        }
 
 
 def from_settings(settings) -> AgenticDebateAgent:

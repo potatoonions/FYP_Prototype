@@ -138,3 +138,147 @@ def get_research_context(topic: str, max_results: int = 5) -> Dict[str, object]:
     """Convenience function to fetch research for a debate topic."""
     researcher = ScholarResearcher(max_results=max_results)
     return researcher.search_topic(topic)
+
+
+# Curated reference sources for common debate topics
+REFERENCE_SOURCES = {
+    "artificial intelligence": [
+        {
+            "title": "Artificial Intelligence: A Modern Approach",
+            "authors": ["Stuart Russell", "Peter Norvig"],
+            "year": "2020",
+            "type": "book",
+            "url": "https://aima.cs.berkeley.edu/",
+            "description": "The definitive textbook on AI covering machine learning, reasoning, planning, and ethics."
+        },
+        {
+            "title": "Ethics of Artificial Intelligence and Robotics",
+            "authors": ["Stanford Encyclopedia of Philosophy"],
+            "year": "2023",
+            "type": "article",
+            "url": "https://plato.stanford.edu/entries/ethics-ai/",
+            "description": "Comprehensive philosophical analysis of AI ethics, bias, and accountability."
+        },
+        {
+            "title": "UNESCO Recommendation on the Ethics of AI",
+            "authors": ["UNESCO"],
+            "year": "2021",
+            "type": "report",
+            "url": "https://www.unesco.org/en/artificial-intelligence/recommendation-ethics",
+            "description": "First global standard on AI ethics adopted by 193 countries."
+        },
+    ],
+    "climate": [
+        {
+            "title": "IPCC Sixth Assessment Report",
+            "authors": ["Intergovernmental Panel on Climate Change"],
+            "year": "2023",
+            "type": "report",
+            "url": "https://www.ipcc.ch/assessment-report/ar6/",
+            "description": "Authoritative scientific assessment of climate change causes, impacts, and solutions."
+        },
+        {
+            "title": "The Economics of Climate Change",
+            "authors": ["Nicholas Stern"],
+            "year": "2007",
+            "type": "book",
+            "url": "https://www.lse.ac.uk/granthaminstitute/publication/the-economics-of-climate-change-the-stern-review/",
+            "description": "Landmark economic analysis of climate change and policy responses."
+        },
+    ],
+    "healthcare": [
+        {
+            "title": "World Health Organization Reports",
+            "authors": ["WHO"],
+            "year": "2023",
+            "type": "report",
+            "url": "https://www.who.int/publications",
+            "description": "Global health statistics, guidelines, and policy recommendations."
+        },
+        {
+            "title": "The Lancet",
+            "authors": ["Various"],
+            "year": "2023",
+            "type": "journal",
+            "url": "https://www.thelancet.com/",
+            "description": "Leading peer-reviewed medical journal with high-impact research."
+        },
+    ],
+    "education": [
+        {
+            "title": "OECD Education at a Glance",
+            "authors": ["OECD"],
+            "year": "2023",
+            "type": "report",
+            "url": "https://www.oecd.org/education/education-at-a-glance/",
+            "description": "Comprehensive international statistics on education systems worldwide."
+        },
+        {
+            "title": "Visible Learning",
+            "authors": ["John Hattie"],
+            "year": "2008",
+            "type": "book",
+            "url": "https://visible-learning.org/",
+            "description": "Meta-analysis of educational research identifying effective teaching strategies."
+        },
+    ],
+    "default": [
+        {
+            "title": "Stanford Encyclopedia of Philosophy",
+            "authors": ["Stanford University"],
+            "year": "2023",
+            "type": "encyclopedia",
+            "url": "https://plato.stanford.edu/",
+            "description": "Authoritative reference for philosophical topics and ethical debates."
+        },
+        {
+            "title": "Academic databases (JSTOR, Google Scholar)",
+            "authors": ["Various"],
+            "year": "2023",
+            "type": "database",
+            "url": "https://scholar.google.com/",
+            "description": "Search peer-reviewed academic papers on your topic."
+        },
+        {
+            "title": "Pew Research Center",
+            "authors": ["Pew Research"],
+            "year": "2023",
+            "type": "report",
+            "url": "https://www.pewresearch.org/",
+            "description": "Non-partisan data and analysis on social issues and public opinion."
+        },
+    ],
+}
+
+
+def get_reference_sources(topic: str) -> List[Dict]:
+    """
+    Get curated reference sources relevant to the debate topic.
+    
+    Args:
+        topic: The debate topic to find sources for
+        
+    Returns:
+        List of source dictionaries with title, authors, url, etc.
+    """
+    topic_lower = topic.lower()
+    sources = []
+    
+    # Check for keyword matches in topic
+    for keyword, keyword_sources in REFERENCE_SOURCES.items():
+        if keyword != "default" and keyword in topic_lower:
+            sources.extend(keyword_sources)
+    
+    # Add default sources if no specific matches or to supplement
+    if len(sources) < 3:
+        sources.extend(REFERENCE_SOURCES["default"])
+    
+    # Remove duplicates while preserving order
+    seen_titles = set()
+    unique_sources = []
+    for source in sources:
+        if source["title"] not in seen_titles:
+            seen_titles.add(source["title"])
+            unique_sources.append(source)
+    
+    return unique_sources[:5]  # Return top 5 sources

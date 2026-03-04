@@ -290,6 +290,287 @@ def debate_chat_view(request: HttpRequest) -> HttpResponse:
                 margin-bottom: 2px;
             }
             
+            /* Reference Sources Styles */
+            .source-card {
+                background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+                padding: 12px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                border-left: 4px solid #667eea;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            
+            .source-card:hover {
+                transform: translateX(3px);
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            }
+            
+            .source-title {
+                font-weight: 600;
+                color: #667eea;
+                font-size: 0.9em;
+                margin-bottom: 4px;
+                line-height: 1.3;
+            }
+            
+            .source-title a {
+                color: #667eea;
+                text-decoration: none;
+            }
+            
+            .source-title a:hover {
+                text-decoration: underline;
+            }
+            
+            .source-meta {
+                font-size: 0.8em;
+                color: #666;
+                margin-bottom: 4px;
+            }
+            
+            .source-type {
+                display: inline-block;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 0.7em;
+                font-weight: 600;
+                text-transform: uppercase;
+                margin-right: 5px;
+            }
+            
+            .source-type.book { background: #e8f5e9; color: #2e7d32; }
+            .source-type.article { background: #e3f2fd; color: #1565c0; }
+            .source-type.report { background: #fff3e0; color: #e65100; }
+            .source-type.journal { background: #f3e5f5; color: #7b1fa2; }
+            .source-type.database { background: #fce4ec; color: #c2185b; }
+            .source-type.encyclopedia { background: #e0f7fa; color: #00838f; }
+            
+            .source-description {
+                font-size: 0.8em;
+                color: #555;
+                line-height: 1.4;
+                margin-top: 4px;
+            }
+            
+            .source-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                margin-top: 6px;
+                padding: 4px 8px;
+                background: #667eea;
+                color: white;
+                text-decoration: none;
+                border-radius: 4px;
+                font-size: 0.75em;
+                font-weight: 500;
+                transition: background 0.2s;
+            }
+            
+            .source-link:hover {
+                background: #764ba2;
+            }
+            
+            .sources-section {
+                max-height: 400px;
+                overflow-y: auto;
+            }
+            
+            .no-sources {
+                text-align: center;
+                color: #888;
+                padding: 20px;
+                font-style: italic;
+            }
+            
+            /* Tab Navigation Styles */
+            .tab-nav {
+                display: flex;
+                border-bottom: 2px solid #e0e0e0;
+                margin-bottom: 15px;
+            }
+            
+            .tab-btn {
+                flex: 1;
+                padding: 10px 8px;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 0.85em;
+                color: #888;
+                border-bottom: 2px solid transparent;
+                margin-bottom: -2px;
+                transition: all 0.2s;
+            }
+            
+            .tab-btn:hover {
+                color: #667eea;
+                background: #f8f9ff;
+            }
+            
+            .tab-btn.active {
+                color: #667eea;
+                border-bottom-color: #667eea;
+            }
+            
+            .tab-content {
+                display: none;
+            }
+            
+            .tab-content.active {
+                display: block;
+            }
+            
+            /* Analysis Tab Styles */
+            .analysis-section {
+                max-height: 450px;
+                overflow-y: auto;
+            }
+            
+            .analysis-summary {
+                background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+                padding: 12px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                text-align: center;
+            }
+            
+            .analysis-score {
+                font-size: 1.8em;
+                font-weight: bold;
+                color: #667eea;
+            }
+            
+            .analysis-summary-text {
+                font-size: 0.85em;
+                color: #555;
+                margin-top: 5px;
+            }
+            
+            .issue-counts {
+                display: flex;
+                gap: 8px;
+                justify-content: center;
+                margin-top: 10px;
+            }
+            
+            .issue-count-badge {
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.75em;
+                font-weight: 600;
+            }
+            
+            .issue-count-badge.fallacy { background: #ffebee; color: #c62828; }
+            .issue-count-badge.weak { background: #fff3e0; color: #e65100; }
+            .issue-count-badge.unsupported { background: #e3f2fd; color: #1565c0; }
+            
+            .issue-card {
+                background: white;
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 10px;
+                border-left: 4px solid #667eea;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            
+            .issue-card.fallacy { border-left-color: #ef5350; }
+            .issue-card.weak_argument { border-left-color: #ff9800; }
+            .issue-card.unsupported_claim { border-left-color: #2196f3; }
+            
+            .issue-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            
+            .issue-type-badge {
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 0.7em;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            
+            .issue-type-badge.fallacy { background: #ffebee; color: #c62828; }
+            .issue-type-badge.weak_argument { background: #fff3e0; color: #e65100; }
+            .issue-type-badge.unsupported_claim { background: #e3f2fd; color: #1565c0; }
+            
+            .issue-name {
+                font-weight: 600;
+                color: #333;
+                font-size: 0.9em;
+            }
+            
+            .issue-severity {
+                margin-left: auto;
+                font-size: 0.7em;
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+            
+            .issue-severity.high { background: #ffcdd2; color: #b71c1c; }
+            .issue-severity.medium { background: #ffe0b2; color: #e65100; }
+            .issue-severity.low { background: #c8e6c9; color: #2e7d32; }
+            
+            .issue-quote {
+                background: #f5f5f5;
+                padding: 8px 10px;
+                border-radius: 4px;
+                font-size: 0.85em;
+                color: #555;
+                margin-bottom: 8px;
+                border-left: 3px solid #ddd;
+                font-style: italic;
+            }
+            
+            .issue-description {
+                font-size: 0.85em;
+                color: #666;
+                margin-bottom: 8px;
+            }
+            
+            .issue-suggestion {
+                background: #e8f5e9;
+                padding: 8px 10px;
+                border-radius: 4px;
+                font-size: 0.8em;
+                color: #2e7d32;
+            }
+            
+            .issue-suggestion::before {
+                content: "💡 ";
+            }
+            
+            .no-issues {
+                text-align: center;
+                padding: 30px 20px;
+                color: #4caf50;
+            }
+            
+            .no-issues-icon {
+                font-size: 2.5em;
+                margin-bottom: 10px;
+            }
+            
+            .strengths-section {
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid #eee;
+            }
+            
+            .strength-badge {
+                display: inline-block;
+                padding: 4px 10px;
+                background: #e8f5e9;
+                color: #2e7d32;
+                border-radius: 12px;
+                font-size: 0.8em;
+                margin: 2px;
+            }
+            
             @media (max-width: 768px) {
                 .container {
                     grid-template-columns: 1fr;
@@ -359,10 +640,40 @@ def debate_chat_view(request: HttpRequest) -> HttpResponse:
                     <div class="score" id="currentScore">-</div>
                 </div>
                 
-                <div class="sidebar-section">
-                    <div class="info-label">📚 Research Found</div>
-                    <div class="info-item" id="papersCount">Papers: 0</div>
-                    <div class="research-papers" id="researchPapers"></div>
+                <!-- Tab Navigation -->
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="switchTab('sources')">📚 Sources</button>
+                    <button class="tab-btn" onclick="switchTab('analysis')">🔍 Analysis</button>
+                </div>
+                
+                <!-- Sources Tab Content -->
+                <div id="sourcesTab" class="tab-content active">
+                    <div class="sidebar-section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+                        <div class="info-label">📖 Reference Sources</div>
+                        <div class="info-item" style="font-size: 0.8em; color: #888; margin-bottom: 10px;">Sources used by AI in arguments</div>
+                        <div class="sources-section" id="referenceSources">
+                            <div class="no-sources">Sources will appear when debate starts</div>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-section" style="border-bottom: none;">
+                        <div class="info-label">📚 Research Found</div>
+                        <div class="info-item" id="papersCount">Papers: 0</div>
+                        <div class="research-papers" id="researchPapers"></div>
+                    </div>
+                </div>
+                
+                <!-- Analysis Tab Content -->
+                <div id="analysisTab" class="tab-content">
+                    <div class="analysis-section" id="analysisContent">
+                        <div class="no-issues">
+                            <div class="no-issues-icon">💬</div>
+                            <div>Submit a response to see analysis</div>
+                            <div style="font-size: 0.85em; color: #888; margin-top: 5px;">
+                                We'll highlight fallacies, weak arguments, and unsupported claims
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -372,6 +683,8 @@ def debate_chat_view(request: HttpRequest) -> HttpResponse:
             let currentRound = 1;
             let isWaitingForAI = false;
             let researchData = null;
+            let referenceSources = [];
+            let lastAnalysis = null;
             
             function showStatus(message, type = 'info') {
                 const statusDiv = document.getElementById('status');
@@ -382,6 +695,155 @@ def debate_chat_view(request: HttpRequest) -> HttpResponse:
             
             function hideStatus() {
                 document.getElementById('status').style.display = 'none';
+            }
+            
+            // Tab switching functionality
+            function switchTab(tabName) {
+                // Update tab buttons
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+                
+                // Update tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabName + 'Tab').classList.add('active');
+            }
+            
+            // Render analysis results
+            function renderAnalysis(detailedAnalysis, aiCritique) {
+                const container = document.getElementById('analysisContent');
+                lastAnalysis = { detailedAnalysis, aiCritique };
+                
+                if (!detailedAnalysis && !aiCritique) {
+                    container.innerHTML = `
+                        <div class="no-issues">
+                            <div class="no-issues-icon">💬</div>
+                            <div>Submit a response to see analysis</div>
+                            <div style="font-size: 0.85em; color: #888; margin-top: 5px;">
+                                We'll highlight fallacies, weak arguments, and unsupported claims
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Combine issues from both analyses
+                let allIssues = [];
+                
+                // Add rule-based analysis issues
+                if (detailedAnalysis && detailedAnalysis.issues) {
+                    allIssues = allIssues.concat(detailedAnalysis.issues);
+                }
+                
+                // Add AI critique issues
+                if (aiCritique && aiCritique.ai_issues) {
+                    aiCritique.ai_issues.forEach(issue => {
+                        // Avoid duplicates
+                        if (!allIssues.some(i => i.matched_text === issue.matched_text)) {
+                            allIssues.push(issue);
+                        }
+                    });
+                }
+                
+                const score = detailedAnalysis ? Math.round(detailedAnalysis.overall_score * 100) : 50;
+                const summary = detailedAnalysis ? detailedAnalysis.summary : 'Analysis complete';
+                const counts = detailedAnalysis ? detailedAnalysis.issue_counts : { fallacies: 0, weak_arguments: 0, unsupported_claims: 0 };
+                
+                let html = `
+                    <div class="analysis-summary">
+                        <div class="analysis-score">${score}%</div>
+                        <div class="analysis-summary-text">${summary}</div>
+                        <div class="issue-counts">
+                            ${counts.fallacies > 0 ? `<span class="issue-count-badge fallacy">🚫 ${counts.fallacies} Fallacy</span>` : ''}
+                            ${counts.weak_arguments > 0 ? `<span class="issue-count-badge weak">⚠️ ${counts.weak_arguments} Weak</span>` : ''}
+                            ${counts.unsupported_claims > 0 ? `<span class="issue-count-badge unsupported">❓ ${counts.unsupported_claims} Unsupported</span>` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                if (allIssues.length === 0) {
+                    html += `
+                        <div class="no-issues">
+                            <div class="no-issues-icon">✅</div>
+                            <div>Great job! No major issues detected.</div>
+                        </div>
+                    `;
+                } else {
+                    allIssues.forEach((issue, index) => {
+                        const issueType = issue.issue_type || 'weak_argument';
+                        const severity = issue.severity || 'medium';
+                        
+                        html += `
+                            <div class="issue-card ${issueType}">
+                                <div class="issue-header">
+                                    <span class="issue-type-badge ${issueType}">${issueType.replace('_', ' ')}</span>
+                                    <span class="issue-name">${issue.name || 'Issue'}</span>
+                                    <span class="issue-severity ${severity}">${severity}</span>
+                                </div>
+                                ${issue.matched_text ? `<div class="issue-quote">"${issue.matched_text}"</div>` : ''}
+                                ${issue.description ? `<div class="issue-description">${issue.description}</div>` : ''}
+                                ${issue.suggestion ? `<div class="issue-suggestion">${issue.suggestion}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                }
+                
+                // Add strengths if any
+                if (detailedAnalysis && detailedAnalysis.strengths && detailedAnalysis.strengths.length > 0) {
+                    html += `
+                        <div class="strengths-section">
+                            <div class="info-label">✨ Strengths</div>
+                            <div>
+                                ${detailedAnalysis.strengths.map(s => 
+                                    `<span class="strength-badge">${s.replace('_', ' ')}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+                
+                // Auto-switch to analysis tab when new analysis arrives
+                document.querySelector('.tab-btn:last-child').click();
+            }
+            
+            function renderSources(sources) {
+                const container = document.getElementById('referenceSources');
+                if (!sources || sources.length === 0) {
+                    container.innerHTML = '<div class="no-sources">No sources available</div>';
+                    return;
+                }
+                
+                referenceSources = sources;
+                let html = '';
+                
+                sources.forEach((source, index) => {
+                    const typeClass = (source.type || 'source').toLowerCase();
+                    const hasUrl = source.url && source.url.trim() !== '';
+                    
+                    html += `
+                        <div class="source-card">
+                            <div class="source-title">
+                                ${hasUrl ? `<a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title || 'Unknown Source'}</a>` : (source.title || 'Unknown Source')}
+                            </div>
+                            <div class="source-meta">
+                                <span class="source-type ${typeClass}">${source.type || 'Source'}</span>
+                                ${source.authors ? source.authors.slice(0, 2).join(', ') : ''} 
+                                ${source.year ? `(${source.year})` : ''}
+                            </div>
+                            ${source.description ? `<div class="source-description">${source.description}</div>` : ''}
+                            ${hasUrl ? `<a href="${source.url}" target="_blank" rel="noopener noreferrer" class="source-link">
+                                📖 View Source
+                            </a>` : ''}
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
             }
             
             function addMessage(role, content, round = null) {
@@ -442,6 +904,11 @@ def debate_chat_view(request: HttpRequest) -> HttpResponse:
                     document.getElementById('sidebarDifficulty').textContent = difficulty;
                     document.getElementById('papersCount').textContent = 'Papers: ' + data.research_context.papers_found;
                     
+                    // Display reference sources in sidebar
+                    if (data.reference_sources) {
+                        renderSources(data.reference_sources);
+                    }
+                    
                     // Display research papers
                     if (researchData.summary) {
                         addMessage('system', researchData.summary);
@@ -498,6 +965,14 @@ def debate_chat_view(request: HttpRequest) -> HttpResponse:
                     
                     // Add AI counter
                     addMessage('ai', data.ai_counter_argument, data.round + 1);
+                    
+                    // Update sources if provided
+                    if (data.sources_cited && data.sources_cited.length > 0) {
+                        renderSources(data.sources_cited);
+                    }
+                    
+                    // Render analysis of user's argument
+                    renderAnalysis(data.detailed_analysis, data.ai_critique);
                     
                     // Update score
                     document.getElementById('currentScore').textContent = data.overall_score;

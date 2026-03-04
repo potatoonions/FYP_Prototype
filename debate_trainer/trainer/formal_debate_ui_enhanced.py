@@ -33,14 +33,16 @@ def formal_debate_view(request):
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
                 min-height: 100vh;
-                padding: 20px;
+                padding: 10px;
+                font-size: 16px;
             }
             
             .container {
-                max-width: 1200px;
-                margin: 0 auto;
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
                 background: white;
-                border-radius: 16px;
+                border-radius: 12px;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                 overflow: hidden;
             }
@@ -52,12 +54,12 @@ def formal_debate_view(request):
                 overflow-x: auto;
             }
             .nav-tab {
-                padding: 15px 25px;
+                padding: 18px 30px;
                 color: #aaa;
                 cursor: pointer;
                 border: none;
                 background: none;
-                font-size: 1em;
+                font-size: 1.1em;
                 white-space: nowrap;
                 transition: all 0.3s;
             }
@@ -68,16 +70,18 @@ def formal_debate_view(request):
             }
             
             /* Sections */
-            .section { display: none; padding: 30px; }
+            .section { display: none; padding: 35px 40px; }
             .section.active { display: block; }
             
             /* Header */
             .header {
                 background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
                 color: white;
-                padding: 25px;
+                padding: 30px;
                 text-align: center;
             }
+            .header h1 { font-size: 2.2em; }
+            .header p { font-size: 1.1em; margin-top: 8px; }
             .header h1 { font-size: 2em; margin-bottom: 5px; }
             
             /* User Profile Card */
@@ -125,12 +129,12 @@ def formal_debate_view(request):
                 margin-bottom: 20px;
             }
             .form-group { display: flex; flex-direction: column; }
-            label { font-weight: 600; margin-bottom: 6px; color: var(--dark); font-size: 0.9em; }
+            label { font-weight: 600; margin-bottom: 8px; color: var(--dark); font-size: 1.05em; }
             input, select, textarea {
-                padding: 12px;
+                padding: 14px;
                 border: 2px solid #e0e0e0;
                 border-radius: 8px;
-                font-size: 1em;
+                font-size: 1.1em;
                 font-family: inherit;
                 transition: border-color 0.3s;
             }
@@ -141,10 +145,10 @@ def formal_debate_view(request):
             
             /* Buttons */
             .btn {
-                padding: 12px 24px;
+                padding: 14px 28px;
                 border: none;
                 border-radius: 8px;
-                font-size: 1em;
+                font-size: 1.1em;
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s;
@@ -163,7 +167,7 @@ def formal_debate_view(request):
             .btn-secondary { background: #e0e0e0; color: var(--dark); }
             .btn-success { background: var(--success); color: white; }
             .btn-danger { background: var(--danger); color: white; }
-            .btn-sm { padding: 8px 16px; font-size: 0.9em; }
+            .btn-sm { padding: 10px 18px; font-size: 1em; }
             .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
             
             /* Timer */
@@ -187,21 +191,21 @@ def formal_debate_view(request):
             .speech-history {
                 background: var(--light);
                 border-radius: 12px;
-                padding: 20px;
-                max-height: 400px;
+                padding: 25px;
+                max-height: 450px;
                 overflow-y: auto;
                 margin: 20px 0;
             }
             .speech-item {
                 background: white;
-                padding: 15px;
+                padding: 18px;
                 border-radius: 8px;
-                margin-bottom: 10px;
+                margin-bottom: 12px;
                 border-left: 4px solid var(--primary);
             }
             .speech-item.ai { border-left-color: var(--secondary); }
-            .speech-meta { font-size: 0.85em; color: #666; margin-bottom: 8px; }
-            .speech-content { line-height: 1.6; }
+            .speech-meta { font-size: 0.95em; color: #666; margin-bottom: 10px; }
+            .speech-content { line-height: 1.7; font-size: 1.1em; }
             
             /* Voice Controls */
             .voice-controls {
@@ -280,19 +284,19 @@ def formal_debate_view(request):
             .stat-card {
                 background: white;
                 border-radius: 12px;
-                padding: 20px;
+                padding: 22px;
                 text-align: center;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             }
             .stat-card .value {
-                font-size: 2em;
+                font-size: 2.2em;
                 font-weight: bold;
                 color: var(--primary);
             }
             .stat-card .label {
-                font-size: 0.85em;
+                font-size: 1em;
                 color: #666;
-                margin-top: 5px;
+                margin-top: 6px;
             }
             
             /* Charts */
@@ -416,6 +420,187 @@ def formal_debate_view(request):
                 .section { padding: 15px; }
                 .timer-display .time { font-size: 2.5em; }
                 .form-grid { grid-template-columns: 1fr; }
+                .debate-layout { grid-template-columns: 1fr; }
+                .analysis-sidebar { display: none; }
+            }
+            
+            /* Debate Layout with Sidebar */
+            .debate-layout {
+                display: grid;
+                grid-template-columns: 1fr 380px;
+                gap: 25px;
+            }
+            
+            .debate-main { min-width: 0; }
+            
+            /* Analysis Sidebar */
+            .analysis-sidebar {
+                background: var(--light);
+                border-radius: 12px;
+                padding: 18px;
+                height: fit-content;
+                position: sticky;
+                top: 20px;
+            }
+            
+            .sidebar-tabs {
+                display: flex;
+                border-bottom: 2px solid #e0e0e0;
+                margin-bottom: 18px;
+            }
+            
+            .sidebar-tab {
+                flex: 1;
+                padding: 12px 10px;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 1em;
+                color: #888;
+                border-bottom: 2px solid transparent;
+                margin-bottom: -2px;
+                transition: all 0.2s;
+            }
+            
+            .sidebar-tab:hover { color: var(--primary); background: rgba(102,126,234,0.05); }
+            .sidebar-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+            
+            .sidebar-content { display: none; max-height: 550px; overflow-y: auto; }
+            .sidebar-content.active { display: block; }
+            
+            /* Source Cards */
+            .source-card {
+                background: white;
+                padding: 14px;
+                border-radius: 8px;
+                margin-bottom: 12px;
+                border-left: 4px solid var(--primary);
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            .source-card:hover {
+                transform: translateX(3px);
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            }
+            .source-title {
+                font-weight: 600;
+                color: var(--primary);
+                font-size: 1em;
+                margin-bottom: 6px;
+            }
+            .source-title a { color: var(--primary); text-decoration: none; }
+            .source-title a:hover { text-decoration: underline; }
+            .source-meta { font-size: 0.9em; color: #666; margin-bottom: 6px; }
+            .source-type {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-size: 0.8em;
+                font-weight: 600;
+                text-transform: uppercase;
+                margin-right: 6px;
+            }
+            .source-type.book { background: #e8f5e9; color: #2e7d32; }
+            .source-type.article { background: #e3f2fd; color: #1565c0; }
+            .source-type.report { background: #fff3e0; color: #e65100; }
+            .source-type.journal { background: #f3e5f5; color: #7b1fa2; }
+            .source-type.database { background: #fce4ec; color: #c2185b; }
+            .source-type.encyclopedia { background: #e0f7fa; color: #00838f; }
+            .source-description { font-size: 0.9em; color: #555; line-height: 1.5; margin-top: 6px; }
+            .source-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                margin-top: 8px;
+                padding: 6px 10px;
+                background: var(--primary);
+                color: white;
+                text-decoration: none;
+                border-radius: 4px;
+                font-size: 0.85em;
+                font-weight: 500;
+                transition: background 0.2s;
+            }
+            .source-link:hover { background: var(--secondary); }
+            
+            /* Analysis Display */
+            .analysis-summary {
+                background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%);
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                text-align: center;
+            }
+            .analysis-score { font-size: 2em; font-weight: bold; color: var(--primary); }
+            .analysis-summary-text { font-size: 0.95em; color: #555; margin-top: 6px; }
+            .issue-counts { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+            .issue-count-badge {
+                padding: 5px 10px;
+                border-radius: 12px;
+                font-size: 0.85em;
+                font-weight: 600;
+            }
+            .issue-count-badge.fallacy { background: #ffebee; color: #c62828; }
+            .issue-count-badge.weak { background: #fff3e0; color: #e65100; }
+            .issue-count-badge.unsupported { background: #e3f2fd; color: #1565c0; }
+            
+            .issue-card {
+                background: white;
+                border-radius: 8px;
+                padding: 14px;
+                margin-bottom: 12px;
+                border-left: 4px solid var(--primary);
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            .issue-card.fallacy { border-left-color: var(--danger); }
+            .issue-card.weak_argument { border-left-color: var(--warning); }
+            .issue-card.unsupported_claim { border-left-color: #2196f3; }
+            
+            .issue-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+            .issue-type-badge {
+                padding: 3px 10px;
+                border-radius: 4px;
+                font-size: 0.8em;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            .issue-type-badge.fallacy { background: #ffebee; color: #c62828; }
+            .issue-type-badge.weak_argument { background: #fff3e0; color: #e65100; }
+            .issue-type-badge.unsupported_claim { background: #e3f2fd; color: #1565c0; }
+            .issue-name { font-weight: 600; color: #333; font-size: 1em; }
+            .issue-severity { margin-left: auto; font-size: 0.8em; padding: 3px 8px; border-radius: 4px; }
+            .issue-severity.high { background: #ffcdd2; color: #b71c1c; }
+            .issue-severity.medium { background: #ffe0b2; color: #e65100; }
+            .issue-severity.low { background: #c8e6c9; color: #2e7d32; }
+            .issue-quote {
+                background: #f5f5f5;
+                padding: 10px 12px;
+                border-radius: 4px;
+                font-size: 0.95em;
+                color: #555;
+                margin-bottom: 10px;
+                border-left: 3px solid #ddd;
+                font-style: italic;
+            }
+            .issue-description { font-size: 0.95em; color: #666; margin-bottom: 10px; }
+            .issue-suggestion {
+                background: #e8f5e9;
+                padding: 10px 12px;
+                border-radius: 4px;
+                font-size: 0.9em;
+                color: #2e7d32;
+            }
+            .issue-suggestion::before { content: "💡 "; }
+            .no-issues { text-align: center; padding: 30px 20px; color: var(--success); }
+            .no-issues-icon { font-size: 2.5em; margin-bottom: 10px; }
+            .strength-badge {
+                display: inline-block;
+                padding: 4px 10px;
+                background: #e8f5e9;
+                color: #2e7d32;
+                border-radius: 12px;
+                font-size: 0.8em;
+                margin: 2px;
             }
         </style>
     </head>
@@ -515,6 +700,8 @@ def formal_debate_view(request):
                 
                 <!-- Active Debate Interface -->
                 <div id="debateInterface" style="display: none;">
+                    <div class="debate-layout">
+                    <div class="debate-main">
                     <!-- Timer -->
                     <div class="timer-display" id="timerDisplay">
                         <div class="time" id="timerTime">5:00</div>
@@ -573,6 +760,22 @@ def formal_debate_view(request):
                             <div class="label">Round</div>
                         </div>
                     </div>
+                    </div><!-- end debate-main -->
+                    
+                    <!-- Analysis Sidebar -->
+                    <div class="analysis-sidebar">
+                        <div class="sidebar-tabs">
+                            <button class="sidebar-tab active" onclick="switchSidebarTab('sources')">📚 Sources</button>
+                            <button class="sidebar-tab" onclick="switchSidebarTab('analysis')">🔍 Analysis</button>
+                        </div>
+                        <div id="sourcesContent" class="sidebar-content active">
+                            <p style="text-align: center; color: #888; padding: 20px;">Sources will appear when the debate starts...</p>
+                        </div>
+                        <div id="analysisContent" class="sidebar-content">
+                            <p style="text-align: center; color: #888; padding: 20px;">Submit a response to see analysis...</p>
+                        </div>
+                    </div>
+                    </div><!-- end debate-layout -->
                 </div>
                 
                 <!-- Loading Overlay -->
@@ -781,6 +984,124 @@ def formal_debate_view(request):
             }
             
             // ============================================
+            // SIDEBAR (SOURCES & ANALYSIS)
+            // ============================================
+            function switchSidebarTab(tabName) {
+                document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
+                event.target.classList.add('active');
+                document.getElementById(tabName + 'Content').classList.add('active');
+            }
+            
+            function renderSources(sources) {
+                const container = document.getElementById('sourcesContent');
+                if (!sources || sources.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">No sources available for this topic.</p>';
+                    return;
+                }
+                
+                let html = '';
+                sources.forEach(source => {
+                    const typeClass = source.type ? source.type.toLowerCase().replace(' ', '_') : 'article';
+                    html += `
+                        <div class="source-card">
+                            <div class="source-title">
+                                ${source.url ? `<a href="${source.url}" target="_blank">${source.title}</a>` : source.title}
+                            </div>
+                            <div class="source-meta">
+                                <span class="source-type ${typeClass}">${source.type || 'Source'}</span>
+                                ${source.authors ? source.authors : ''}${source.year ? ` (${source.year})` : ''}
+                            </div>
+                            ${source.description ? `<div class="source-description">${source.description}</div>` : ''}
+                            ${source.url ? `<a href="${source.url}" target="_blank" class="source-link">View Source →</a>` : ''}
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+            
+            function renderAnalysis(analysis, aiCritique) {
+                const container = document.getElementById('analysisContent');
+                
+                if (!analysis && !aiCritique) {
+                    container.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">Submit a response to see analysis...</p>';
+                    return;
+                }
+                
+                let html = '';
+                
+                // Summary section
+                const issues = analysis?.issues || [];
+                const fallacies = issues.filter(i => i.type === 'fallacy');
+                const weakArgs = issues.filter(i => i.type === 'weak_argument');
+                const unsupported = issues.filter(i => i.type === 'unsupported_claim');
+                
+                html += `
+                    <div class="analysis-summary">
+                        <div class="analysis-score">${issues.length === 0 ? '✓' : issues.length}</div>
+                        <div class="analysis-summary-text">${issues.length === 0 ? 'Strong argument!' : 'Issues detected'}</div>
+                        <div class="issue-counts">
+                            ${fallacies.length > 0 ? `<span class="issue-count-badge fallacy">${fallacies.length} Fallacies</span>` : ''}
+                            ${weakArgs.length > 0 ? `<span class="issue-count-badge weak">${weakArgs.length} Weak Points</span>` : ''}
+                            ${unsupported.length > 0 ? `<span class="issue-count-badge unsupported">${unsupported.length} Unsupported</span>` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                // Strengths
+                if (analysis?.strengths && analysis.strengths.length > 0) {
+                    html += '<div style="margin-bottom: 15px;"><strong style="color: #2e7d32;">✓ Strengths:</strong><div style="margin-top: 5px;">';
+                    analysis.strengths.forEach(s => {
+                        html += `<span class="strength-badge">${s}</span>`;
+                    });
+                    html += '</div></div>';
+                }
+                
+                // Issue cards
+                if (issues.length > 0) {
+                    html += '<div style="margin-top: 10px;">';
+                    issues.forEach(issue => {
+                        html += `
+                            <div class="issue-card ${issue.type}">
+                                <div class="issue-header">
+                                    <span class="issue-type-badge ${issue.type}">${issue.type.replace('_', ' ')}</span>
+                                    <span class="issue-name">${issue.name || ''}</span>
+                                    ${issue.severity ? `<span class="issue-severity ${issue.severity}">${issue.severity}</span>` : ''}
+                                </div>
+                                ${issue.quote ? `<div class="issue-quote">"${issue.quote}"</div>` : ''}
+                                <div class="issue-description">${issue.description || ''}</div>
+                                ${issue.suggestion ? `<div class="issue-suggestion">${issue.suggestion}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+                
+                // AI Critique
+                if (aiCritique) {
+                    html += `
+                        <div style="margin-top: 15px; padding: 12px; background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%); border-radius: 8px;">
+                            <strong style="color: var(--primary);">🤖 AI Feedback:</strong>
+                            <p style="margin-top: 8px; font-size: 0.85em; color: #555; line-height: 1.5;">${aiCritique}</p>
+                        </div>
+                    `;
+                }
+                
+                // No issues
+                if (issues.length === 0 && !aiCritique) {
+                    html = `
+                        <div class="no-issues">
+                            <div class="no-issues-icon">✓</div>
+                            <strong>Well-structured argument!</strong>
+                            <p style="margin-top: 10px; font-size: 0.9em;">No logical fallacies or weak points detected.</p>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+            }
+            
+            // ============================================
             // USER PROFILE & GAMIFICATION
             // ============================================
             async function loadUserProfile() {
@@ -924,6 +1245,11 @@ def formal_debate_view(request):
                     addToHistory('ai', data.ai_opening_position);
                     state.lastOpponentText = data.ai_opening_position;
                     
+                    // Render sources in sidebar
+                    if (data.reference_sources) {
+                        renderSources(data.reference_sources);
+                    }
+                    
                     startTimer();
                     
                     if (document.getElementById('autoTTS').checked) {
@@ -971,6 +1297,11 @@ def formal_debate_view(request):
                     state.currentRound = data.next_round;
                     document.getElementById('roundDisplay').textContent = state.currentRound;
                     document.getElementById('userScoreDisplay').textContent = Math.round(data.overall_score);
+                    
+                    // Render analysis in sidebar
+                    if (data.detailed_analysis || data.ai_critique) {
+                        renderAnalysis(data.detailed_analysis, data.ai_critique);
+                    }
                     
                     // Show feedback toast
                     showToast(data.coach_feedback.substring(0, 100) + '...', 'success');
