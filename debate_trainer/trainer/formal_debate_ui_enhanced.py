@@ -1032,9 +1032,9 @@ def formal_debate_view(request):
                 
                 // Summary section
                 const issues = analysis?.issues || [];
-                const fallacies = issues.filter(i => i.type === 'fallacy');
-                const weakArgs = issues.filter(i => i.type === 'weak_argument');
-                const unsupported = issues.filter(i => i.type === 'unsupported_claim');
+                const fallacies = issues.filter(i => (i.type || i.issue_type) === 'fallacy');
+                const weakArgs = issues.filter(i => (i.type || i.issue_type) === 'weak_argument');
+                const unsupported = issues.filter(i => (i.type || i.issue_type) === 'unsupported_claim');
                 
                 html += `
                     <div class="analysis-summary">
@@ -1061,14 +1061,15 @@ def formal_debate_view(request):
                 if (issues.length > 0) {
                     html += '<div style="margin-top: 10px;">';
                     issues.forEach(issue => {
+                        const issueType = issue.type || issue.issue_type || 'unknown';
                         html += `
-                            <div class="issue-card ${issue.type}">
+                            <div class="issue-card ${issueType}">
                                 <div class="issue-header">
-                                    <span class="issue-type-badge ${issue.type}">${issue.type.replace('_', ' ')}</span>
+                                    <span class="issue-type-badge ${issueType}">${issueType.replace('_', ' ')}</span>
                                     <span class="issue-name">${issue.name || ''}</span>
                                     ${issue.severity ? `<span class="issue-severity ${issue.severity}">${issue.severity}</span>` : ''}
                                 </div>
-                                ${issue.quote ? `<div class="issue-quote">"${issue.quote}"</div>` : ''}
+                                ${issue.quote || issue.matched_text ? `<div class="issue-quote">"${issue.quote || issue.matched_text}"</div>` : ''}
                                 <div class="issue-description">${issue.description || ''}</div>
                                 ${issue.suggestion ? `<div class="issue-suggestion">${issue.suggestion}</div>` : ''}
                             </div>
@@ -1079,10 +1080,17 @@ def formal_debate_view(request):
                 
                 // AI Critique
                 if (aiCritique) {
+                    // Handle aiCritique as an object with raw_analysis or as a string
+                    let critiqueText = '';
+                    if (typeof aiCritique === 'object') {
+                        critiqueText = aiCritique.raw_analysis || JSON.stringify(aiCritique.ai_issues || aiCritique, null, 2);
+                    } else {
+                        critiqueText = aiCritique;
+                    }
                     html += `
                         <div style="margin-top: 15px; padding: 12px; background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%); border-radius: 8px;">
                             <strong style="color: var(--primary);">🤖 AI Feedback:</strong>
-                            <p style="margin-top: 8px; font-size: 0.85em; color: #555; line-height: 1.5;">${aiCritique}</p>
+                            <p style="margin-top: 8px; font-size: 0.85em; color: #555; line-height: 1.5; white-space: pre-wrap;">${critiqueText}</p>
                         </div>
                     `;
                 }
@@ -1378,6 +1386,10 @@ def formal_debate_view(request):
             // TIMER
             // ============================================
             function startTimer() {
+                // Clear any existing interval first
+                if (state.timerInterval) {
+                    clearInterval(state.timerInterval);
+                }
                 state.timerPaused = false;
                 state.timerInterval = setInterval(() => {
                     if (!state.timerPaused && state.timerSeconds > 0) {
