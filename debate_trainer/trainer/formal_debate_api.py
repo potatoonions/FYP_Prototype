@@ -10,7 +10,7 @@ import uuid
 import logging
 
 from .models import FormalDebateConfig, FormalDebateSession
-from .services import from_settings, DebateFlowEngine, SpeechAnalyzer
+from .services import from_settings, DebateFlowEngine, SpeechAnalyzer, analyze_argument_with_ml
 from .validators import validate_json_payload, validate_string_field
 from .rate_limit import rate_limit
 
@@ -233,10 +233,23 @@ def submit_formal_speech(request):
         analyzer = SpeechAnalyzer()
         formality = analyzer.analyze_formality(speech_text)
         
+        # ML-enhanced argument quality analysis
+        # Wrapped in try-except to not break debate if ML fails
+        try:
+            ml_analysis = analyze_argument_with_ml(speech_text, use_ml=True)
+        except Exception as ml_error:
+            logger.warning(f"ML analysis failed: {ml_error}")
+            ml_analysis = {
+                "ml_available": False,
+                "combined_score": formality["formality_score"],
+                "error": str(ml_error)
+            }
+        
         # For rebuttal speeches, check if new arguments were introduced
         validation = session.config.validate_new_arguments(current_speech_info["type"], speech_text)
         
         # Record user speech
+        ml_score = ml_analysis.get("combined_score", formality["formality_score"])
         user_speech_record = {
             "speaker": "user",
             "side": session.user_side,
@@ -246,11 +259,14 @@ def submit_formal_speech(request):
             "pois_received": pois_received,
             "timestamp": timezone.now().isoformat(),
             "formality_score": formality["formality_score"],
+            "ml_score": ml_score,
+            "ml_quality_class": ml_analysis.get("ml_based", {}).get("quality_class", "medium") if ml_analysis.get("ml_available") else None,
             "issues": formality["issues"],
             "argument_validation": validation
         }
         session.speeches.append(user_speech_record)
-        session.user_score += formality["formality_score"] * 0.5  # Formality counts for 50%
+        # Combined scoring: 40% formality, 60% ML argument quality
+        session.user_score += (formality["formality_score"] * 0.4 + ml_score * 0.6) * 0.5
         
         # Move to next speech
         session.current_speaker_index += 1
@@ -271,6 +287,7 @@ def submit_formal_speech(request):
                 },
                 "user_speech_feedback": {
                     "formality": formality,
+                    "ml_analysis": ml_analysis,
                     "validation": validation,
                     "time_used": time_taken
                 }
@@ -331,6 +348,7 @@ def submit_formal_speech(request):
             "status": "in_progress",
             "user_speech_feedback": {
                 "formality": formality,
+                "ml_analysis": ml_analysis,
                 "validation": validation,
                 "time_used": time_taken
             },

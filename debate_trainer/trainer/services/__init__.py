@@ -15,6 +15,7 @@ from .._services_core import (
     # Analysis
     analyze_argument,
     analyze_argument_detailed,
+    analyze_argument_with_ml,
     detect_fallacies,
     detect_strengths,
     AnalysisResult,
@@ -39,6 +40,7 @@ __all__ = [
     'AI_PERSONALITIES',
     'analyze_argument',
     'analyze_argument_detailed',
+    'analyze_argument_with_ml',
     'detect_fallacies',
     'detect_strengths',
     'AnalysisResult',

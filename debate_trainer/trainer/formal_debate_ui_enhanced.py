@@ -751,9 +751,9 @@ def formal_debate_view(request):
                             <div class="value" id="userScoreDisplay">0</div>
                             <div class="label">Your Score</div>
                         </div>
-                        <div class="stat-card">
-                            <div class="value" id="aiScoreDisplay">0</div>
-                            <div class="label">AI Score</div>
+                        <div class="stat-card" style="background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%);">
+                            <div class="value" id="mlScoreDisplay" style="color: var(--primary);">-</div>
+                            <div class="label">🤖 ML Score</div>
                         </div>
                         <div class="stat-card">
                             <div class="value" id="roundDisplay">1</div>
@@ -1020,15 +1020,55 @@ def formal_debate_view(request):
                 container.innerHTML = html;
             }
             
-            function renderAnalysis(analysis, aiCritique) {
+            function renderAnalysis(analysis, aiCritique, mlAnalysis) {
                 const container = document.getElementById('analysisContent');
                 
-                if (!analysis && !aiCritique) {
+                if (!analysis && !aiCritique && !mlAnalysis) {
                     container.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">Submit a response to see analysis...</p>';
                     return;
                 }
                 
                 let html = '';
+                
+                // ML Analysis section (if available)
+                if (mlAnalysis && mlAnalysis.ml_available) {
+                    const mlData = mlAnalysis.ml_based || {};
+                    const qualityClass = mlData.quality_class || 'medium';
+                    const qualityScore = Math.round((mlData.quality_score || 0.5) * 100);
+                    const confidence = Math.round((mlData.confidence || 0) * 100);
+                    
+                    const classColors = {
+                        'strong': '#28a745',
+                        'medium': '#ffc107', 
+                        'weak': '#dc3545'
+                    };
+                    const classEmojis = {
+                        'strong': '🏆',
+                        'medium': '📊',
+                        'weak': '⚠️'
+                    };
+                    
+                    html += `
+                        <div style="margin-bottom: 15px; padding: 15px; background: linear-gradient(135deg, rgba(102,126,234,0.15) 0%, rgba(118,75,162,0.15) 100%); border-radius: 12px; border-left: 4px solid ${classColors[qualityClass]};">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <strong style="color: var(--primary);">🤖 ML Analysis</strong>
+                                <span style="background: ${classColors[qualityClass]}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">
+                                    ${classEmojis[qualityClass]} ${qualityClass.toUpperCase()}
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 20px; margin-top: 10px;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.8em; font-weight: bold; color: ${classColors[qualityClass]};">${qualityScore}</div>
+                                    <div style="font-size: 0.75em; color: #666;">Quality Score</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.8em; font-weight: bold; color: var(--primary);">${confidence}%</div>
+                                    <div style="font-size: 0.75em; color: #666;">Confidence</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
                 
                 // Summary section
                 const issues = analysis?.issues || [];
@@ -1306,9 +1346,15 @@ def formal_debate_view(request):
                     document.getElementById('roundDisplay').textContent = state.currentRound;
                     document.getElementById('userScoreDisplay').textContent = Math.round(data.overall_score);
                     
-                    // Render analysis in sidebar
-                    if (data.detailed_analysis || data.ai_critique) {
-                        renderAnalysis(data.detailed_analysis, data.ai_critique);
+                    // Update ML score display if available
+                    if (data.ml_score) {
+                        const mlScoreEl = document.getElementById('mlScoreDisplay');
+                        if (mlScoreEl) mlScoreEl.textContent = Math.round(data.ml_score);
+                    }
+                    
+                    // Render analysis in sidebar (including ML analysis)
+                    if (data.detailed_analysis || data.ai_critique || data.ml_analysis) {
+                        renderAnalysis(data.detailed_analysis, data.ai_critique, data.ml_analysis);
                     }
                     
                     // Show feedback toast

@@ -12,7 +12,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.core.cache import cache
 
 from .models import DebateSession, DebateRound
-from .services import from_settings, analyze_argument, analyze_argument_detailed, get_research_context, get_reference_sources
+from .services import from_settings, analyze_argument, analyze_argument_detailed, analyze_argument_with_ml, get_research_context, get_reference_sources
 from .validators import (
     validate_json_payload,
     validate_string_field,
@@ -249,11 +249,23 @@ def submit_user_response(request: HttpRequest) -> JsonResponse:
             logger.info(f"Attempted response to ended debate session: {session_id}")
             return _json_error("Debate session has ended", status=400)
 
-        # Analyze user's argument
+        # Analyze user's argument (rule-based)
         analysis = analyze_argument(user_response).as_dict()
         
         # Perform detailed analysis for highlighting issues
         detailed_analysis = analyze_argument_detailed(user_response).as_dict()
+        
+        # ML-enhanced analysis (combines rule-based + neural network)
+        # Wrapped in try-except to not break debate if ML fails
+        try:
+            ml_analysis = analyze_argument_with_ml(user_response, use_ml=True)
+        except Exception as ml_error:
+            logger.warning(f"ML analysis failed: {ml_error}")
+            ml_analysis = {
+                "ml_available": False,
+                "combined_score": analysis["score"],
+                "error": str(ml_error)
+            }
 
         # Add user response to conversation
         current_round = debate_round.current_round
@@ -331,10 +343,12 @@ def submit_user_response(request: HttpRequest) -> JsonResponse:
             "round": current_round,
             "user_analysis": analysis,
             "detailed_analysis": detailed_analysis,
+            "ml_analysis": ml_analysis,
             "ai_critique": ai_critique,
             "ai_counter_argument": counter_text,
             "coach_feedback": feedback["feedback"],
             "current_score": round(analysis["score"] * 100, 1),
+            "ml_score": round(ml_analysis.get("combined_score", analysis["score"]) * 100, 1),
             "overall_score": overall_score,
             "next_round": current_round + 1,
             "sources_cited": sources_used,

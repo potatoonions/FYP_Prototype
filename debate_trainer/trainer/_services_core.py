@@ -445,6 +445,64 @@ def analyze_argument_detailed(text: str) -> DetailedAnalysisResult:
     return DetailedAnalysisResult(unique_issues, strengths, overall_score, summary)
 
 
+def analyze_argument_with_ml(text: str, use_ml: bool = True) -> Dict:
+    """
+    Enhanced argument analysis combining rule-based and ML approaches.
+    
+    Args:
+        text: The argument text to analyze
+        use_ml: Whether to include ML-based analysis
+        
+    Returns:
+        Combined analysis dictionary with both rule-based and ML scores
+    """
+    # Get rule-based analysis
+    rule_based = analyze_argument_detailed(text)
+    
+    result = {
+        "rule_based": {
+            "issues": [
+                {
+                    "type": issue.issue_type,
+                    "description": issue.description,
+                    "text": issue.text_snippet,
+                    "severity": issue.severity,
+                    "suggestion": issue.suggestion,
+                }
+                for issue in rule_based.issues
+            ],
+            "strengths": rule_based.strengths,
+            "score": rule_based.overall_score,
+            "summary": rule_based.summary,
+        },
+        "combined_score": rule_based.overall_score,
+    }
+    
+    # Add ML analysis if enabled
+    if use_ml:
+        try:
+            from .ml import get_ml_analysis
+            ml_result = get_ml_analysis(text)
+            result["ml_based"] = ml_result
+            
+            # Combine scores (weighted average: 60% ML, 40% rule-based)
+            if ml_result.get("ml_available", False):
+                ml_score = ml_result.get("quality_score", 0.5)
+                rule_score = rule_based.overall_score
+                result["combined_score"] = (0.6 * ml_score) + (0.4 * rule_score)
+                result["ml_available"] = True
+            else:
+                result["ml_available"] = False
+        except ImportError:
+            result["ml_based"] = None
+            result["ml_available"] = False
+    else:
+        result["ml_based"] = None
+        result["ml_available"] = False
+    
+    return result
+
+
 # =============================================================================
 # RESEARCH SOURCES
 # =============================================================================
