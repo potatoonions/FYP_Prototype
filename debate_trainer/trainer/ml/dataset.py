@@ -1,10 +1,12 @@
 """
 Dataset handling for argument quality classification.
-Loads and preprocesses data from HuggingFace datasets.
+Loads data from a CSV file (argument_dataset.csv).
 """
 
+import os
+import csv
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 from dataclasses import dataclass
 
 import torch
@@ -12,13 +14,9 @@ from torch.utils.data import Dataset, DataLoader
 
 logger = logging.getLogger(__name__)
 
-# Try to import datasets
-try:
-    from datasets import load_dataset
-    DATASETS_AVAILABLE = True
-except ImportError:
-    DATASETS_AVAILABLE = False
-    logger.warning("HuggingFace datasets not installed. Run: pip install datasets")
+# Path to local CSV dataset
+DATASET_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_DATASET_PATH = os.path.join(DATASET_DIR, "argument_dataset.csv")
 
 
 @dataclass
@@ -69,177 +67,69 @@ class ArgumentQualityDataset(Dataset):
 
 def load_argument_quality_data() -> Tuple[List[ArgumentSample], List[ArgumentSample]]:
     """
-    Load argument quality data from HuggingFace.
+    Load argument quality data from CSV file.
     
-    Uses multiple datasets and combines them:
-    1. UKP Sentential Argument Mining
-    2. IBM Claim Stance Dataset  
-    3. Argument Quality Ranking
+    The CSV file should be located at: trainer/ml/argument_dataset.csv
+    Format: text,quality_label,quality_score
+    - quality_label: 0=weak, 1=medium, 2=strong
+    - quality_score: 0.0 to 1.0
     
     Returns:
         Tuple of (train_samples, val_samples)
     """
-    if not DATASETS_AVAILABLE:
-        logger.error("HuggingFace datasets not available")
+    import random
+    
+    # Load from CSV file
+    all_samples = _load_from_csv()
+    
+    if len(all_samples) == 0:
+        logger.error(f"No data found! Please add data to: {CSV_DATASET_PATH}")
+        logger.error("CSV format: text,quality_label,quality_score")
+        logger.error("  quality_label: 0=weak, 1=medium, 2=strong")
+        logger.error("  quality_score: 0.0 to 1.0")
         return [], []
     
-    all_samples = []
+    if len(all_samples) < 50:
+        logger.warning(f"Only {len(all_samples)} samples found. Consider adding more data for better training.")
     
-    # Dataset 1: UKP Sentential Argument Mining Corpus
-    try:
-        logger.info("Loading UKP Argument Mining dataset...")
-        dataset = load_dataset("ukp/ampersand", trust_remote_code=True)
-        
-        for split in ["train", "validation"]:
-            if split in dataset:
-                for item in dataset[split]:
-                    text = item.get("premise", "") or item.get("text", "")
-                    if text and len(text) > 20:
-                        # Map annotation to quality (simplified)
-                        label = item.get("label", 1)
-                        if isinstance(label, int):
-                            quality = min(2, max(0, label))
-                        else:
-                            quality = 1  # default to medium
-                        
-                        score = (quality + 0.5) / 3.0
-                        all_samples.append(ArgumentSample(text, quality, score))
-        
-        logger.info(f"Loaded {len(all_samples)} samples from UKP dataset")
-    except Exception as e:
-        logger.warning(f"Could not load UKP dataset: {e}")
-    
-    # Dataset 2: Argument Quality Ranking (ArgQ)
-    try:
-        logger.info("Loading ArgQ dataset...")
-        dataset = load_dataset("webis/args-me", trust_remote_code=True)
-        
-        count = 0
-        for split in dataset:
-            for item in dataset[split]:
-                if count >= 5000:  # Limit samples
-                    break
-                    
-                text = item.get("argument", "") or item.get("premise", "")
-                if text and len(text) > 30:
-                    # Use stance confidence as quality proxy
-                    stance = item.get("stance", "")
-                    if stance in ["pro", "con"]:
-                        quality = 2  # Clear stance = strong
-                        score = 0.8
-                    else:
-                        quality = 1  # Unclear = medium
-                        score = 0.5
-                    
-                    all_samples.append(ArgumentSample(text, quality, score))
-                    count += 1
-        
-        logger.info(f"Total samples after ArgQ: {len(all_samples)}")
-    except Exception as e:
-        logger.warning(f"Could not load ArgQ dataset: {e}")
-    
-    # Dataset 3: Persuasive Essays (argument components)
-    try:
-        logger.info("Loading Persuasive Essays dataset...")
-        dataset = load_dataset("tasksource/persuasive-essays", trust_remote_code=True)
-        
-        count = 0
-        for split in dataset:
-            for item in dataset[split]:
-                if count >= 3000:
-                    break
-                
-                text = item.get("text", "")
-                label = item.get("label", "")
-                
-                if text and len(text) > 20:
-                    # Map component types to quality
-                    if label in ["MajorClaim", "Claim"]:
-                        quality = 2
-                        score = 0.85
-                    elif label == "Premise":
-                        quality = 1
-                        score = 0.6
-                    else:
-                        quality = 0
-                        score = 0.3
-                    
-                    all_samples.append(ArgumentSample(text, quality, score))
-                    count += 1
-        
-        logger.info(f"Total samples after Essays: {len(all_samples)}")
-    except Exception as e:
-        logger.warning(f"Could not load Persuasive Essays dataset: {e}")
-    
-    # If no datasets loaded, use synthetic fallback
-    if len(all_samples) < 100:
-        logger.warning("Insufficient data from HuggingFace, using synthetic data")
-        all_samples = _generate_synthetic_samples()
-    
-    # Shuffle and split
-    import random
+    # Shuffle and split (85% train, 15% validation)
     random.shuffle(all_samples)
     
     split_idx = int(len(all_samples) * 0.85)
     train_samples = all_samples[:split_idx]
     val_samples = all_samples[split_idx:]
     
-    logger.info(f"Final dataset: {len(train_samples)} train, {len(val_samples)} val")
+    # Ensure at least 1 validation sample
+    if len(val_samples) == 0 and len(train_samples) > 1:
+        val_samples = [train_samples.pop()]
+    
+    logger.info(f"Dataset loaded: {len(train_samples)} train, {len(val_samples)} val samples")
     
     return train_samples, val_samples
 
 
-def _generate_synthetic_samples() -> List[ArgumentSample]:
-    """Generate synthetic argument samples as fallback."""
+def _load_from_csv() -> List[ArgumentSample]:
+    """Load samples from local CSV file."""
     samples = []
     
-    # Strong arguments
-    strong_templates = [
-        "Research conducted by leading universities demonstrates that {topic} leads to measurable improvements in {outcome}, with studies showing a {percent}% increase in effectiveness.",
-        "Multiple peer-reviewed studies have consistently shown that {topic} is essential for {outcome}. The evidence is clear: implementing {topic} results in significant benefits.",
-        "According to data from international organizations, countries that implement {topic} see substantial improvements in {outcome}, proving its effectiveness.",
-    ]
+    if not os.path.exists(CSV_DATASET_PATH):
+        logger.info(f"CSV file not found at {CSV_DATASET_PATH}")
+        return samples
     
-    # Medium arguments
-    medium_templates = [
-        "{topic} is important because it helps achieve {outcome}. Many experts believe this approach is beneficial.",
-        "There are good reasons to support {topic}. It can lead to improvements in {outcome} when properly implemented.",
-        "Supporting {topic} makes sense because it addresses key issues related to {outcome}.",
-    ]
-    
-    # Weak arguments
-    weak_templates = [
-        "{topic} is obviously the best option. Anyone can see that.",
-        "Everyone knows {topic} is true. It's just common sense.",
-        "{topic} is good because I think it is. That's my opinion.",
-        "You're wrong if you don't support {topic}. It's clearly better.",
-    ]
-    
-    topics = [
-        ("renewable energy", "environmental sustainability"),
-        ("education funding", "student outcomes"),
-        ("healthcare access", "public health"),
-        ("technology regulation", "consumer protection"),
-        ("urban planning", "quality of life"),
-    ]
-    
-    import random
-    
-    for topic, outcome in topics:
-        # Generate strong samples
-        for template in strong_templates:
-            text = template.format(topic=topic, outcome=outcome, percent=random.randint(15, 45))
-            samples.append(ArgumentSample(text, 2, random.uniform(0.75, 0.95)))
+    try:
+        logger.info(f"Loading dataset from CSV: {CSV_DATASET_PATH}")
+        with open(CSV_DATASET_PATH, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                text = row.get('text', '').strip()
+                if text and len(text) > 10:
+                    quality_label = int(row.get('quality_label', 1))
+                    quality_score = float(row.get('quality_score', 0.5))
+                    samples.append(ArgumentSample(text, quality_label, quality_score))
         
-        # Generate medium samples
-        for template in medium_templates:
-            text = template.format(topic=topic, outcome=outcome)
-            samples.append(ArgumentSample(text, 1, random.uniform(0.4, 0.65)))
-        
-        # Generate weak samples
-        for template in weak_templates:
-            text = template.format(topic=topic)
-            samples.append(ArgumentSample(text, 0, random.uniform(0.1, 0.35)))
+        logger.info(f"Loaded {len(samples)} samples from CSV")
+    except Exception as e:
+        logger.error(f"Error loading CSV: {e}")
     
     return samples
 
