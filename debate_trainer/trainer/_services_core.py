@@ -743,12 +743,20 @@ class AgenticDebateAgent:
         source_instruction = ""
         if sources:
             source_instruction = "When making claims, reference which source supports your point using format: 'According to [Source Title]...' or 'Research from [Source] shows...'. Include at least one source reference. "
-        
-        system = f"{style} Topic: '{topic}'. Difficulty: {difficulty}. {source_instruction}State your position in 3-4 sentences MAX (under 70 words). Be bold and specific. No preamble."
+
+        system = (
+            f"{style} You are the NEGATIVE side in a formal debate. "
+            f"Topic: '{topic}'. Difficulty: {difficulty}. {source_instruction}"
+            f"Deliver a structured NEGATIVE CONSTRUCTIVE SPEECH (max 150 words) with:\n"
+            f"1. A clear statement OPPOSING the motion\n"
+            f"2. Two or three numbered contentions with brief evidence or reasoning\n"
+            f"3. A closing line on the burden the affirmative must meet\n"
+            f"Do NOT ask questions. Do NOT critique an opponent yet — just build YOUR case."
+        )
         sources_text = self._format_sources_for_prompt(sources)
-        user_prompt = f"Topic: {topic}\nContext: {research_summary[:300]}\n{sources_text}\nYour position (70 words max, cite sources):"
+        user_prompt = f"Topic: {topic}\nContext: {research_summary[:300]}\n{sources_text}\nNegative constructive speech (150 words max, cite sources where possible):"
         response = self._call_model(system, user_prompt)
-        
+
         return {"text": response, "sources_used": sources[:3] if sources else [], "personality": personality, "difficulty": difficulty}
 
     def generate_counter_response(self, topic: str, ai_opening: str, user_argument: str, round_number: int, difficulty: str = "medium", personality: str = "balanced", sources: list = None) -> Dict[str, object]:
@@ -756,16 +764,34 @@ class AgenticDebateAgent:
         sources = sources or []
         source_instruction = ""
         if sources:
-            source_instruction = "When making factual claims, reference sources using format: 'According to [Source]...' or 'As [Source] demonstrates...'. "
-        
-        system = f"{style} Round {round_number} debate. Difficulty: {difficulty}. {source_instruction}Reply in MAX 80 words: 1) Challenge their weakest point with evidence, 2) End with ONE sharp question. No fluff or greetings."
+            source_instruction = "Reference sources using format: 'According to [Source]...' or 'As [Source] demonstrates...'. "
+
+        system = (
+            f"{style} You are the NEGATIVE side in a formal debate, delivering Round {round_number} rebuttal. "
+            f"Difficulty: {difficulty}. {source_instruction}"
+            f"Structure your response (max 120 words) as:\n"
+            f"**Critique of their speech:** Identify and rebut the weakest point in their argument (be specific, name the flaw).\n"
+            f"**Negative rebuttal:** Reinforce or extend ONE of your own negative contentions with evidence.\n"
+            f"Do NOT just ask questions — make a positive case for the negative side. "
+            f"After your speech, add a brief 'COACH NOTE:' (1-2 sentences) pointing out the single biggest weakness in the user's argument."
+        )
         sources_text = self._format_sources_for_prompt(sources)
-        user_prompt = f"Topic: {topic}\nMy position: {ai_opening[:150]}\nThey said: {user_argument}\n{sources_text}\nCounter (80 words max, cite sources if making factual claims):"
+        user_prompt = (
+            f"Topic: {topic}\nNegative position so far: {ai_opening[:200]}\n"
+            f"User's speech: {user_argument}\n{sources_text}\n"
+            f"Negative rebuttal speech + coach note (120 words max):"
+        )
         counter = self._call_model(system, user_prompt)
         return {"counter_argument": counter, "round": round_number, "personality": personality, "sources_used": sources[:3] if sources else []}
 
     def generate_debate_feedback(self, user_argument: str, round_number: int, difficulty: str = "medium") -> Dict[str, object]:
-        system = f"Debate coach, round {round_number}. Give feedback in MAX 50 words:\n✓ What worked | ✗ Fix this | → Next step\nDifficulty: {difficulty}."
+        system = (
+            f"You are a debate coach reviewing a student's Round {round_number} speech. "
+            f"Difficulty: {difficulty}. Give structured feedback in MAX 60 words:\n"
+            f"✓ Structure: Did they follow formal speech structure?\n"
+            f"✗ Weakest point: What was the biggest flaw?\n"
+            f"→ Priority fix: One specific thing to improve next round."
+        )
         feedback = self._call_model(system, user_argument)
         return {"round": round_number, "feedback": feedback, "difficulty": difficulty}
 
