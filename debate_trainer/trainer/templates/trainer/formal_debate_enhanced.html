@@ -1,0 +1,958 @@
+{% extends "trainer/base.html" %}
+{% block title %}AI Debate Trainer - Enhanced{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    /* Nav tabs */
+    .nav-tabs { display: flex; background: var(--dark); overflow-x: auto; }
+    .nav-tab {
+        padding: 14px 22px; color: #9ca3af; cursor: pointer; border: none;
+        background: none; font-size: 0.92em; font-weight: 500; white-space: nowrap;
+        border-bottom: 3px solid transparent; transition: all 0.15s;
+    }
+    .nav-tab:hover { color: #fff; }
+    .nav-tab.active { color: #fff; border-bottom-color: var(--primary); }
+
+    .section { display: none; padding: 28px 24px; }
+    .section.active { display: block; }
+
+    /* Profile card — no gradient */
+    .profile-card {
+        background: var(--dark); color: #fff;
+        padding: 16px 20px; border-radius: var(--radius); margin-bottom: 20px;
+        display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .profile-card .level-badge {
+        background: rgba(255,255,255,0.15); padding: 4px 12px;
+        border-radius: 20px; font-size: 0.85em; font-weight: 700;
+    }
+    .xp-bar { background: rgba(255,255,255,0.2); border-radius: 10px; height: 8px; flex: 1; min-width: 120px; overflow: hidden; }
+    .xp-fill { background: var(--success); height: 100%; transition: width 0.5s; }
+    .streak-badge { background: #e67700; color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 600; }
+
+    /* Daily challenge — flat colour not gradient */
+    .challenge-banner {
+        background: var(--primary); color: #fff;
+        padding: 12px 16px; border-radius: var(--radius); margin-bottom: 20px;
+        display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        flex-wrap: wrap;
+    }
+    .challenge-banner.completed { background: var(--success); }
+
+    /* Debate layout */
+    .debate-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+    @media (max-width: 900px) { .debate-layout { grid-template-columns: 1fr; } }
+
+    /* Timer — flat, no gradient */
+    .timer-display {
+        background: var(--dark); color: #fff;
+        padding: 20px; border-radius: var(--radius);
+        text-align: center; margin: 16px 0;
+    }
+    .timer-display .time { font-size: 3em; font-family: 'Courier New', monospace; font-weight: bold; }
+    .timer-display.warning { background: var(--danger); }
+
+    /* Speech history */
+    .speech-history {
+        background: var(--bg); border-radius: var(--radius); padding: 16px;
+        max-height: 400px; overflow-y: auto; margin: 16px 0;
+        border: 1px solid var(--border);
+    }
+    .speech-item { background: var(--white); padding: 14px; border-radius: var(--radius); margin-bottom: 10px; border-left: 4px solid var(--primary); }
+    .speech-item.ai { border-left-color: var(--secondary); }
+    .speech-meta { font-size: 0.82em; color: var(--grey); margin-bottom: 6px; }
+    .speech-content { line-height: 1.6; font-size: 0.93em; }
+
+    /* Voice controls */
+    .voice-controls {
+        background: var(--bg); padding: 10px 14px; border-radius: var(--radius);
+        margin: 12px 0; display: flex; gap: 10px; align-items: center;
+        flex-wrap: wrap; border: 1px solid var(--border);
+    }
+    .voice-indicator { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+    .voice-indicator.listening { background: var(--danger); animation: pulse 1s infinite; }
+    .voice-indicator.speaking  { background: var(--success); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* Personality grid */
+    .personality-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 12px 0; }
+    .personality-card {
+        background: var(--white); border: 2px solid var(--border); border-radius: var(--radius);
+        padding: 12px; cursor: pointer; transition: border-color 0.15s; text-align: center;
+    }
+    .personality-card:hover { border-color: var(--primary); }
+    .personality-card.selected { border-color: var(--primary); background: var(--primary-light); }
+    .personality-card h4 { font-size: 0.9em; margin-bottom: 4px; }
+    .personality-card p { font-size: 0.78em; color: var(--grey); }
+
+    /* Suggestions */
+    .suggestions-panel { background: #fff3cd; border: 1px solid #ffc107; border-radius: var(--radius); padding: 12px; margin: 12px 0; }
+    .suggestions-panel h4 { margin-bottom: 8px; font-size: 0.88em; color: #856404; }
+    .suggestion-item { background: var(--white); padding: 7px 10px; border-radius: 6px; margin: 4px 0; cursor: pointer; font-size: 0.85em; transition: background 0.15s; }
+    .suggestion-item:hover { background: #ffeeba; }
+
+    /* Stats grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 16px 0; }
+    .stat-card { background: var(--white); border-radius: var(--radius); padding: 18px; text-align: center; border: 1px solid var(--border); }
+    .stat-card .value { font-size: 2em; font-weight: 800; color: var(--primary); }
+    .stat-card .label { font-size: 0.82em; color: var(--grey); margin-top: 4px; }
+
+    /* Analytics charts — fixed heights */
+    .chart-container { background: var(--white); border-radius: var(--radius); padding: 16px; margin: 16px 0; border: 1px solid var(--border); }
+    .chart-container h3 { font-size: 0.95em; font-weight: 700; margin-bottom: 12px; color: var(--dark); }
+    .chart-container canvas { max-height: 260px; width: 100% !important; }
+
+    /* Leaderboard */
+    .leaderboard-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+    .leaderboard-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); font-size: 0.82em; color: var(--grey); font-weight: 700; }
+    .leaderboard-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .leaderboard-table tr:hover td { background: var(--bg); }
+    .rank-gold td:first-child { font-weight: 700; color: #b08d00; }
+    .rank-silver td:first-child { font-weight: 700; color: #888; }
+    .rank-bronze td:first-child { font-weight: 700; color: #a05c1e; }
+
+    /* Badges */
+    .badges-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .earned-badge { background: var(--primary-light); color: var(--primary); padding: 6px 14px; border-radius: 20px; font-size: 0.82em; font-weight: 600; border: 1px solid var(--primary); }
+    .locked-badge { background: #f3f4f6; color: #9ca3af; padding: 6px 14px; border-radius: 20px; font-size: 0.82em; border: 1px solid var(--border); }
+
+    /* Replay */
+    .replay-controls { display: flex; gap: 8px; align-items: center; margin: 12px 0; }
+    .replay-progress-wrap { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .replay-progress-fill { height: 100%; background: var(--primary); transition: width 0.3s; }
+
+    /* Sidebar tabs */
+    .sidebar-tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 12px; }
+    .sidebar-tab {
+        flex: 1; padding: 9px 6px; background: none; border: none; cursor: pointer;
+        font-weight: 600; font-size: 0.82em; color: var(--grey);
+        border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s;
+    }
+    .sidebar-tab:hover { color: var(--primary); }
+    .sidebar-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .sidebar-content { display: none; max-height: 500px; overflow-y: auto; }
+    .sidebar-content.active { display: block; }
+
+    /* Analysis */
+    .analysis-summary { background: var(--primary-light); padding: 12px; border-radius: var(--radius); margin-bottom: 12px; text-align: center; }
+    .analysis-score { font-size: 1.8em; font-weight: 800; color: var(--primary); }
+    .issue-counts { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+    .issue-count-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600; }
+    .issue-count-badge.fallacy { background: #ffebee; color: var(--danger); }
+    .issue-count-badge.weak { background: #fff3e0; color: var(--warning); }
+    .issue-count-badge.unsupported { background: #e3f2fd; color: #1565c0; }
+    .no-content { text-align: center; color: var(--grey); padding: 20px; font-size: 0.85em; font-style: italic; }
+
+    /* Loading overlay */
+    #loadingOverlay {
+        display: none; align-items: center; gap: 10px; padding: 14px;
+        background: var(--primary-light); border-left: 4px solid var(--primary);
+        border-radius: var(--radius); margin: 12px 0;
+        font-size: 0.9em; color: var(--primary); font-weight: 600;
+    }
+    #loadingOverlay.active { display: flex; }
+
+    /* Toast */
+    .toast-container { position: fixed; top: 16px; right: 16px; z-index: 1000; max-width: 320px; }
+    .toast {
+        background: var(--dark); color: #fff; padding: 12px 16px; border-radius: var(--radius);
+        margin-bottom: 8px; font-size: 0.88em; animation: slideIn 0.2s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .toast.success { background: var(--success); }
+    .toast.error   { background: var(--danger); }
+    .toast.xp      { background: var(--primary); }
+    @keyframes slideIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Session summary card in replay */
+    .session-summary-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 16px; }
+    .session-summary-card h4 { font-size: 0.9em; font-weight: 700; margin-bottom: 12px; color: var(--dark); }
+    .summary-row { display: flex; justify-content: space-between; font-size: 0.85em; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-label { color: var(--grey); }
+    .summary-value { font-weight: 600; color: var(--dark); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="background: var(--white); border-radius: 0 0 var(--radius) var(--radius); box-shadow: var(--shadow);">
+    <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="showSection('debate', event)">Debate</button>
+        <button class="nav-tab" onclick="showSection('analytics', event)">Analytics</button>
+        <button class="nav-tab" onclick="showSection('leaderboard', event)">Leaderboard</button>
+        <button class="nav-tab" onclick="showSection('replay', event)">Replay</button>
+        <button class="nav-tab" onclick="showSection('settings', event)">Settings</button>
+    </nav>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- DEBATE SECTION -->
+    <div class="section active" id="debateSection">
+        <div class="profile-card" id="profileCard">
+            <div>
+                <div style="font-weight: 700; font-size: 1em;" id="profileName">Loading...</div>
+                <span class="streak-badge" id="streakBadge">0 day streak</span>
+            </div>
+            <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width: 0%"></div></div>
+            <small id="xpText" style="color: #9ca3af;">0 / 100 XP</small>
+            <div class="level-badge" id="levelBadge">Level 1</div>
+        </div>
+
+        <div class="challenge-banner" id="challengeBanner">
+            <div>
+                <strong>Daily Challenge:</strong>
+                <span id="challengeTopic">Loading...</span>
+            </div>
+            <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); color:#fff;" onclick="startDailyChallenge()">+50 XP</button>
+        </div>
+
+        <!-- Setup form -->
+        <div id="setupForm">
+            <h2 style="font-size: 1.1em; font-weight: 700; margin-bottom: 16px;">Configure Your Debate</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="userName" value="Anonymous" placeholder="Enter your name">
+                </div>
+                <div class="form-group">
+                    <label>Difficulty</label>
+                    <select id="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Debate Motion / Topic</label>
+                <textarea id="motion" rows="2" placeholder="e.g. Social media does more harm than good"></textarea>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Your Side</label>
+                    <select id="userSide">
+                        <option value="affirmative">Affirmative (For)</option>
+                        <option value="negative">Negative (Against)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Speech Time (minutes)</label>
+                    <input type="number" id="speechTime" value="5" min="1" max="15">
+                </div>
+            </div>
+
+            <label style="font-weight: 600; font-size: 0.9em; color: #374151; margin-bottom: 8px; display: block;">AI Opponent Style</label>
+            <div class="personality-grid" id="personalityGrid"></div>
+
+            <div class="btn-group" style="margin-top: 16px;">
+                <button class="btn btn-primary" onclick="startDebate()">Start Debate</button>
+            </div>
+        </div>
+
+        <!-- Active debate -->
+        <div id="debateInterface" style="display: none;">
+            <div id="loadingOverlay">
+                <div class="spinner"></div>
+                <span id="loadingMsg">AI is thinking...</span>
+            </div>
+            <div class="debate-layout">
+                <div class="debate-main">
+                    <div class="timer-display" id="timerDisplay">
+                        <div class="time" id="timerTime">5:00</div>
+                        <div style="font-size: 0.85em; opacity: 0.8; margin-top: 4px;">Time Remaining</div>
+                        <div style="margin-top: 10px; display: flex; gap: 8px; justify-content: center;">
+                            <button class="btn btn-sm btn-secondary" id="pauseBtn" onclick="togglePause()">Pause</button>
+                            <button class="btn btn-sm btn-secondary" onclick="resetTimer()">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="voice-controls">
+                        <div class="voice-indicator" id="voiceIndicator"></div>
+                        <button class="btn btn-sm btn-secondary" id="sttBtn" onclick="toggleSpeechToText()">Speak</button>
+                        <button class="btn btn-sm btn-secondary" id="ttsBtn" onclick="toggleTextToSpeech()">Read Aloud</button>
+                        <label style="margin-left: auto; font-size: 0.85em; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                            <input type="checkbox" id="autoTTS"> Auto-read AI responses
+                        </label>
+                    </div>
+
+                    <div class="speech-history" id="speechHistory">
+                        <p style="text-align: center; color: var(--grey); font-size: 0.88em;">Debate will appear here...</p>
+                    </div>
+
+                    <div class="suggestions-panel" id="suggestionsPanel" style="display: none;">
+                        <h4>Rebuttal Suggestions</h4>
+                        <div id="suggestionsList"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Your Response</label>
+                        <textarea id="userSpeech" rows="4" placeholder="Type your argument or click Speak..." oninput="handleTyping()"></textarea>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="submitSpeech()">Submit Speech</button>
+                        <button class="btn btn-danger" onclick="endDebate()">End Debate</button>
+                    </div>
+
+                    <div class="stats-grid" style="margin-top: 16px;">
+                        <div class="stat-card">
+                            <div class="value" id="userScoreDisplay">0</div>
+                            <div class="label">Your Score</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="mlScoreDisplay" style="color: var(--secondary);">—</div>
+                            <div class="label">ML Score</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="roundDisplay">1</div>
+                            <div class="label">Round</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis sidebar -->
+                <div class="card">
+                    <div class="card-body" style="padding: 14px;">
+                        <div class="sidebar-tabs">
+                            <button class="sidebar-tab active" onclick="switchSidebarTab('sources', event)">Sources</button>
+                            <button class="sidebar-tab" onclick="switchSidebarTab('analysis', event)">Analysis</button>
+                        </div>
+                        <div id="sourcesContent" class="sidebar-content active">
+                            <div class="no-content">Sources will appear when debate starts...</div>
+                        </div>
+                        <div id="analysisContent" class="sidebar-content">
+                            <div class="no-content">Submit a response to see analysis...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANALYTICS SECTION -->
+    <div class="section" id="analyticsSection">
+        <h2 style="font-size: 1.1em; font-weight: 700; margin-bottom: 16px;">Your Analytics</h2>
+        <div class="stats-grid" id="analyticsStats">
+            <div class="stat-card"><div class="value" id="totalDebates">0</div><div class="label">Total Debates</div></div>
+            <div class="stat-card"><div class="value" id="avgScore">0</div><div class="label">Avg Score</div></div>
+            <div class="stat-card"><div class="value" id="winRate">0%</div><div class="label">Win Rate</div></div>
+            <div class="stat-card"><div class="value" id="bestScore">0</div><div class="label">Best Score</div></div>
+        </div>
+        <div class="chart-container">
+            <h3>Skill Breakdown</h3>
+            <canvas id="skillRadar"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Score History</h3>
+            <canvas id="scoreHistory"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Common Fallacies to Avoid</h3>
+            <canvas id="fallacyChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Badges</h3>
+            <div class="badges-grid" id="badgesGrid"></div>
+        </div>
+    </div>
+
+    <!-- LEADERBOARD SECTION -->
+    <div class="section" id="leaderboardSection">
+        <h2 style="font-size: 1.1em; font-weight: 700; margin-bottom: 16px;">Leaderboard</h2>
+        <div class="btn-group" style="margin-bottom: 16px;">
+            <button class="btn btn-primary btn-sm" onclick="loadLeaderboard('all')">All Time</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadLeaderboard('week')">This Week</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadLeaderboard('month')">This Month</button>
+        </div>
+        <div class="stat-card" id="yourRank" style="margin-bottom: 16px; text-align: left;">
+            Your Rank: <strong id="rankDisplay">#--</strong> &nbsp;|&nbsp; Top <span id="percentileDisplay">--%</span>
+        </div>
+        <table class="leaderboard-table">
+            <thead><tr><th>Rank</th><th>Name</th><th>Level</th><th>XP</th><th>Win Rate</th><th>Streak</th></tr></thead>
+            <tbody id="leaderboardBody"></tbody>
+        </table>
+    </div>
+
+    <!-- REPLAY SECTION -->
+    <div class="section" id="replaySection">
+        <h2 style="font-size: 1.1em; font-weight: 700; margin-bottom: 16px;">Session Replay</h2>
+        <div class="form-group">
+            <label>Select a Session</label>
+            <select id="replaySelect" onchange="loadReplay()">
+                <option value="">-- Select Session --</option>
+            </select>
+        </div>
+        <div id="replayViewer" style="display: none;">
+            <div class="replay-controls">
+                <button class="btn btn-sm btn-secondary" onclick="replayPrev()">Prev</button>
+                <button class="btn btn-sm btn-primary" onclick="replayPlay()">Play</button>
+                <button class="btn btn-sm btn-secondary" onclick="replayNext()">Next</button>
+                <div class="replay-progress-wrap"><div class="replay-progress-fill" id="replayProgress"></div></div>
+                <span id="replayStep" style="font-size: 0.82em; color: var(--grey); white-space: nowrap;">0/0</span>
+            </div>
+            <div class="speech-history" id="replayHistory"></div>
+
+            <!-- Session summary — expanded -->
+            <div class="session-summary-card" id="replaySummary">
+                <h4>Session Summary</h4>
+                <div class="summary-row"><span class="summary-label">Topic</span><span class="summary-value" id="replayTopic">—</span></div>
+                <div class="summary-row"><span class="summary-label">Final Score</span><span class="summary-value" id="replayScore">—</span></div>
+                <div class="summary-row"><span class="summary-label">Total Rounds</span><span class="summary-value" id="replayRounds">—</span></div>
+                <div class="summary-row"><span class="summary-label">Difficulty</span><span class="summary-value" id="replayDifficulty">—</span></div>
+                <div class="summary-row"><span class="summary-label">Date</span><span class="summary-value" id="replayDate">—</span></div>
+                <div class="summary-row"><span class="summary-label">User</span><span class="summary-value" id="replayUser">—</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS SECTION -->
+    <div class="section" id="settingsSection">
+        <h2 style="font-size: 1.1em; font-weight: 700; margin-bottom: 16px;">Settings</h2>
+        <div class="form-group">
+            <label>Text-to-Speech Voice</label>
+            <select id="ttsVoice"></select>
+        </div>
+        <div class="form-group">
+            <label>Speech Rate: <span id="ttsRateValue">1.0x</span></label>
+            <input type="range" id="ttsRate" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
+                <input type="checkbox" id="soundEffects" checked> Enable timer bells
+            </label>
+        </div>
+        <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
+                <input type="checkbox" id="autoSuggestions" checked> Show real-time rebuttal suggestions
+            </label>
+        </div>
+    </div>
+</div>
+
+<script>
+let state = {
+    userName: 'Anonymous',
+    sessionId: null,
+    currentRound: 1,
+    timerSeconds: 300,
+    timerInterval: null,
+    timerPaused: false,
+    selectedPersonality: 'balanced',
+    isListening: false,
+    isSpeaking: false,
+    recognition: null,
+    synthesis: window.speechSynthesis,
+    replayData: null,
+    replayIndex: 0,
+    lastOpponentText: '',
+};
+
+// NAV
+function showSection(name, event) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(name + 'Section').classList.add('active');
+    event.target.classList.add('active');
+    if (name === 'analytics') loadAnalytics();
+    if (name === 'leaderboard') loadLeaderboard('all');
+}
+
+// SIDEBAR TABS
+function switchSidebarTab(name, event) {
+    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById(name + 'Content').classList.add('active');
+}
+
+// LOADING
+function showLoading(show, msg) {
+    const el = document.getElementById('loadingOverlay');
+    el.classList.toggle('active', show);
+    if (msg) document.getElementById('loadingMsg').textContent = msg;
+}
+
+// TOAST
+function showToast(msg, type) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast ' + (type || '');
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+}
+
+// SOURCES
+function renderSources(sources) {
+    const c = document.getElementById('sourcesContent');
+    if (!sources || sources.length === 0) { c.innerHTML = '<div class="no-content">No sources available.</div>'; return; }
+    c.innerHTML = sources.map(s => {
+        const tc = (s.type || 'article').toLowerCase();
+        const title = s.url ? `<a href="${s.url}" target="_blank" rel="noopener">${s.title}</a>` : s.title;
+        return `<div class="source-card">
+            <div class="source-title">${title}</div>
+            <div class="source-meta"><span class="source-type ${tc}">${s.type || 'source'}</span> ${s.authors ? s.authors : ''} ${s.year ? `(${s.year})` : ''}</div>
+            ${s.description ? `<div class="source-description">${s.description}</div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+// ANALYSIS
+function renderAnalysis(analysis, aiCritique, mlAnalysis) {
+    const c = document.getElementById('analysisContent');
+    if (!analysis && !aiCritique && !mlAnalysis) { c.innerHTML = '<div class="no-content">Submit a response to see analysis...</div>'; return; }
+
+    let html = '';
+
+    if (mlAnalysis && mlAnalysis.ml_available) {
+        const ml = mlAnalysis.ml_based || {};
+        const qc = ml.quality_class || 'medium';
+        const qs = Math.round((ml.quality_score || 0.5) * 100);
+        const conf = Math.round((ml.confidence || 0) * 100);
+        const colours = { strong: 'var(--success)', medium: 'var(--warning)', weak: 'var(--danger)' };
+        html += `<div class="alert alert-info" style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="font-size: 0.88em;">ML Analysis</strong>
+                <span class="badge badge-primary" style="background:${colours[qc]};color:#fff;">${qc.toUpperCase()}</span>
+            </div>
+            <div style="display: flex; gap: 20px;">
+                <div style="text-align:center;"><div style="font-size:1.5em;font-weight:800;color:${colours[qc]};">${qs}</div><div style="font-size:0.75em;color:var(--grey);">Quality</div></div>
+                <div style="text-align:center;"><div style="font-size:1.5em;font-weight:800;color:var(--primary);">${conf}%</div><div style="font-size:0.75em;color:var(--grey);">Confidence</div></div>
+            </div>
+        </div>`;
+    }
+
+    const issues = analysis?.issues || [];
+    const fallacies = issues.filter(i => (i.type||i.issue_type) === 'fallacy');
+    const weakArgs = issues.filter(i => (i.type||i.issue_type) === 'weak_argument');
+    const unsupported = issues.filter(i => (i.type||i.issue_type) === 'unsupported_claim');
+
+    html += `<div class="analysis-summary">
+        <div class="analysis-score">${issues.length === 0 ? 'OK' : issues.length}</div>
+        <div style="font-size:0.82em;color:var(--grey);margin-top:4px;">${issues.length === 0 ? 'Strong argument' : 'Issues detected'}</div>
+        <div class="issue-counts">
+            ${fallacies.length > 0 ? `<span class="issue-count-badge fallacy">${fallacies.length} Fallacy</span>` : ''}
+            ${weakArgs.length > 0 ? `<span class="issue-count-badge weak">${weakArgs.length} Weak</span>` : ''}
+            ${unsupported.length > 0 ? `<span class="issue-count-badge unsupported">${unsupported.length} Unsupported</span>` : ''}
+        </div>
+    </div>`;
+
+    if (analysis?.strengths?.length > 0) {
+        html += `<div style="margin-bottom:12px;">${analysis.strengths.map(s => `<span class="strength-badge">${s.replace('_',' ')}</span>`).join('')}</div>`;
+    }
+
+    issues.forEach(issue => {
+        const t = issue.type || issue.issue_type || 'unknown';
+        const sev = issue.severity || 'medium';
+        html += `<div class="issue-card ${t}">
+            <div class="issue-header">
+                <span class="issue-type-badge ${t}">${t.replace('_',' ')}</span>
+                <span style="font-weight:600;font-size:0.88em;">${issue.name || ''}</span>
+                <span class="issue-severity ${sev}">${sev}</span>
+            </div>
+            ${(issue.quote||issue.matched_text) ? `<div class="issue-quote">"${issue.quote||issue.matched_text}"</div>` : ''}
+            <div class="issue-description">${issue.description || ''}</div>
+            ${issue.suggestion ? `<div class="issue-suggestion">${issue.suggestion}</div>` : ''}
+        </div>`;
+    });
+
+    if (aiCritique) {
+        const text = typeof aiCritique === 'object' ? (aiCritique.raw_analysis || JSON.stringify(aiCritique.ai_issues || [], null, 2)) : aiCritique;
+        html += `<div class="alert alert-info" style="margin-top:12px;">
+            <strong style="font-size:0.85em;">AI Feedback</strong>
+            <p style="margin-top:6px;font-size:0.85em;color:#374151;white-space:pre-wrap;">${text}</p>
+        </div>`;
+    }
+
+    if (issues.length === 0 && !aiCritique) {
+        html = '<div class="no-content" style="color:var(--success);">No major issues detected. Well-structured argument.</div>';
+    }
+
+    c.innerHTML = html;
+    // Auto-switch to analysis tab
+    document.querySelectorAll('.sidebar-tab')[1].dispatchEvent(new MouseEvent('click', {bubbles: true}));
+}
+
+// PROFILE
+async function loadUserProfile() {
+    try {
+        const res = await fetch(`/api/profile/?user_name=${encodeURIComponent(state.userName)}`);
+        const d = await res.json();
+        document.getElementById('profileName').textContent = d.user_name;
+        document.getElementById('levelBadge').textContent = `Level ${d.level}`;
+        document.getElementById('streakBadge').textContent = `${d.current_streak} day streak`;
+        document.getElementById('xpFill').style.width = `${d.progress_percent}%`;
+        document.getElementById('xpText').textContent = `${d.xp_progress} / ${d.xp_needed} XP`;
+        if (d.new_badges?.length > 0) d.new_badges.forEach(b => showToast(`New Badge: ${b.name}!`, 'success'));
+    } catch(e) { console.error(e); }
+}
+
+async function awardXP(score, won) {
+    try {
+        const res = await fetch('/api/profile/xp/', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_name: state.userName, score, won }) });
+        const d = await res.json();
+        showToast(`+${d.xp_awarded} XP earned!`, 'xp');
+        if (d.leveled_up) showToast(`Level Up! You're now Level ${d.level}!`, 'success');
+        await loadUserProfile();
+    } catch(e) { console.error(e); }
+}
+
+// DAILY CHALLENGE
+async function loadDailyChallenge() {
+    try {
+        const res = await fetch(`/api/challenge/?user_name=${encodeURIComponent(state.userName)}`);
+        const d = await res.json();
+        document.getElementById('challengeTopic').textContent = d.challenge.topic;
+        if (d.completed) {
+            document.getElementById('challengeBanner').classList.add('completed');
+            document.getElementById('challengeBanner').querySelector('button').textContent = 'Completed';
+            document.getElementById('challengeBanner').querySelector('button').disabled = true;
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function startDailyChallenge() {
+    const res = await fetch(`/api/challenge/?user_name=${encodeURIComponent(state.userName)}`);
+    const d = await res.json();
+    document.getElementById('motion').value = d.challenge.topic;
+    document.getElementById('difficulty').value = d.challenge.difficulty;
+    showToast('Daily Challenge loaded! +50 XP bonus on completion.', 'success');
+}
+
+// PERSONALITIES
+async function loadPersonalities() {
+    try {
+        const res = await fetch('/api/personalities/');
+        const d = await res.json();
+        document.getElementById('personalityGrid').innerHTML = d.personalities.map(p => `
+            <div class="personality-card ${p.id === state.selectedPersonality ? 'selected' : ''}" onclick="selectPersonality('${p.id}', event)">
+                <h4>${p.name}</h4><p>${p.description}</p>
+            </div>`).join('');
+    } catch(e) { console.error(e); }
+}
+
+function selectPersonality(id, event) {
+    state.selectedPersonality = id;
+    document.querySelectorAll('.personality-card').forEach(c => c.classList.remove('selected'));
+    event.target.closest('.personality-card').classList.add('selected');
+}
+
+// DEBATE
+async function startDebate() {
+    state.userName = document.getElementById('userName').value || 'Anonymous';
+    localStorage.setItem('debateUserName', state.userName);
+    const motion = document.getElementById('motion').value.trim();
+    if (!motion) { showToast('Please enter a debate topic', 'error'); return; }
+
+    showLoading(true, 'Researching topic and generating opening position...');
+    try {
+        const res = await fetch('/api/debate/start/', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ topic: motion, user_name: state.userName, difficulty: document.getElementById('difficulty').value, personality: state.selectedPersonality })
+        });
+        const d = await res.json();
+        if (d.error) throw new Error(d.error);
+
+        state.sessionId = d.session_id;
+        state.currentRound = 1;
+        state.timerSeconds = parseInt(document.getElementById('speechTime').value) * 60;
+
+        document.getElementById('setupForm').style.display = 'none';
+        document.getElementById('debateInterface').style.display = 'block';
+
+        addToHistory('ai', d.ai_opening_position, 1);
+        state.lastOpponentText = d.ai_opening_position;
+        if (d.reference_sources) renderSources(d.reference_sources);
+        startTimer();
+        if (document.getElementById('autoTTS').checked) speakText(d.ai_opening_position);
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
+    finally { showLoading(false); }
+}
+
+async function submitSpeech() {
+    const speech = document.getElementById('userSpeech').value.trim();
+    if (!speech) { showToast('Please enter your response', 'error'); return; }
+    showLoading(true, 'AI is formulating a response...');
+    pauseTimer();
+    try {
+        const res = await fetch('/api/debate/response/', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ session_id: state.sessionId, response: speech, personality: state.selectedPersonality })
+        });
+        const d = await res.json();
+        if (d.error) throw new Error(d.error);
+
+        addToHistory('user', speech, state.currentRound);
+        addToHistory('ai', d.ai_counter_argument, d.next_round);
+        state.lastOpponentText = d.ai_counter_argument;
+        document.getElementById('userSpeech').value = '';
+        document.getElementById('suggestionsPanel').style.display = 'none';
+        state.currentRound = d.next_round;
+        document.getElementById('roundDisplay').textContent = state.currentRound;
+        document.getElementById('userScoreDisplay').textContent = Math.round(d.overall_score);
+        if (d.ml_score) document.getElementById('mlScoreDisplay').textContent = Math.round(d.ml_score);
+        if (d.detailed_analysis || d.ai_critique || d.ml_analysis) renderAnalysis(d.detailed_analysis, d.ai_critique, d.ml_analysis);
+        showToast((d.coach_feedback || '').substring(0, 120), 'success');
+        if (document.getElementById('autoTTS').checked) speakText(d.ai_counter_argument);
+        resetTimer(); startTimer();
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
+    finally { showLoading(false); }
+}
+
+async function endDebate() {
+    if (!confirm('End this debate?')) return;
+    showLoading(true, 'Saving results...');
+    try {
+        const res = await fetch('/api/debate/end/', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ session_id: state.sessionId }) });
+        const d = await res.json();
+        pauseTimer();
+        await awardXP(d.overall_score, d.overall_score >= 60);
+        showToast(`Debate ended. Final score: ${d.overall_score}`, d.overall_score >= 60 ? 'success' : 'error');
+        document.getElementById('setupForm').style.display = 'block';
+        document.getElementById('debateInterface').style.display = 'none';
+        document.getElementById('speechHistory').innerHTML = '<p style="text-align:center;color:var(--grey);font-size:0.88em;">Debate will appear here...</p>';
+        state.sessionId = null;
+        await loadUserProfile();
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
+    finally { showLoading(false); }
+}
+
+function addToHistory(role, content, round) {
+    const h = document.getElementById('speechHistory');
+    if (h.querySelector('p')) h.innerHTML = '';
+    const item = document.createElement('div');
+    item.className = `speech-item ${role}`;
+    const roundLabel = round != null ? `Round ${round}` : '';
+    item.innerHTML = `<div class="speech-meta"><strong>${role === 'ai' ? 'AI Opponent' : 'You'}</strong> <span style="float:right;">${roundLabel}</span></div><div class="speech-content">${content}</div>`;
+    h.appendChild(item);
+    h.scrollTop = h.scrollHeight;
+}
+
+// TIMER
+function startTimer() {
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.timerPaused = false;
+    state.timerInterval = setInterval(() => {
+        if (!state.timerPaused && state.timerSeconds > 0) {
+            state.timerSeconds--;
+            updateTimerDisplay();
+            if (state.timerSeconds === 60 && document.getElementById('soundEffects').checked) { playBell(1); document.getElementById('timerDisplay').classList.add('warning'); }
+            if (state.timerSeconds === 0 && document.getElementById('soundEffects').checked) playBell(2);
+        }
+    }, 1000);
+}
+function togglePause() {
+    state.timerPaused = !state.timerPaused;
+    document.getElementById('pauseBtn').textContent = state.timerPaused ? 'Resume' : 'Pause';
+}
+function pauseTimer() { state.timerPaused = true; document.getElementById('pauseBtn').textContent = 'Resume'; }
+function resetTimer() { state.timerSeconds = parseInt(document.getElementById('speechTime').value) * 60; document.getElementById('timerDisplay').classList.remove('warning'); updateTimerDisplay(); }
+function updateTimerDisplay() {
+    const m = Math.floor(state.timerSeconds / 60), s = state.timerSeconds % 60;
+    document.getElementById('timerTime').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+}
+function playBell(count) {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    for (let i = 0; i < count; i++) setTimeout(() => {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 800; osc.type = 'sine';
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
+    }, i * 600);
+}
+
+// TTS
+function loadVoices() {
+    const voices = state.synthesis.getVoices();
+    document.getElementById('ttsVoice').innerHTML = voices.map((v,i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join('');
+}
+if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
+function speakText(text) {
+    if (state.isSpeaking) state.synthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const voices = state.synthesis.getVoices();
+    const vi = document.getElementById('ttsVoice').value;
+    if (voices[vi]) u.voice = voices[vi];
+    u.rate = parseFloat(document.getElementById('ttsRate').value);
+    u.onstart = () => { state.isSpeaking = true; document.getElementById('voiceIndicator').classList.add('speaking'); };
+    u.onend  = () => { state.isSpeaking = false; document.getElementById('voiceIndicator').classList.remove('speaking'); };
+    state.synthesis.speak(u);
+}
+function toggleTextToSpeech() { if (state.isSpeaking) { state.synthesis.cancel(); state.isSpeaking = false; document.getElementById('voiceIndicator').classList.remove('speaking'); } else speakText(state.lastOpponentText); }
+document.getElementById('ttsRate').addEventListener('input', e => { document.getElementById('ttsRateValue').textContent = e.target.value + 'x'; });
+
+// STT
+function initSpeechRecognition() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { document.getElementById('sttBtn').disabled = true; return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    state.recognition = new SR();
+    state.recognition.continuous = true; state.recognition.interimResults = true;
+    state.recognition.onresult = e => { let t = ''; for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript; document.getElementById('userSpeech').value = t; };
+    state.recognition.onerror = () => stopListening();
+    state.recognition.onend = () => { if (state.isListening) state.recognition.start(); };
+}
+function toggleSpeechToText() { state.isListening ? stopListening() : startListening(); }
+function startListening() { if (!state.recognition) return; state.isListening = true; state.recognition.start(); document.getElementById('voiceIndicator').classList.add('listening'); document.getElementById('sttBtn').textContent = 'Stop'; }
+function stopListening() { if (!state.recognition) return; state.isListening = false; state.recognition.stop(); document.getElementById('voiceIndicator').classList.remove('listening'); document.getElementById('sttBtn').textContent = 'Speak'; }
+
+// SUGGESTIONS
+let suggestionTimeout = null;
+function handleTyping() {
+    if (!document.getElementById('autoSuggestions').checked) return;
+    clearTimeout(suggestionTimeout);
+    suggestionTimeout = setTimeout(async () => {
+        const text = document.getElementById('userSpeech').value;
+        if (text.length < 20) { document.getElementById('suggestionsPanel').style.display = 'none'; return; }
+        try {
+            const res = await fetch('/api/suggestions/', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ opponent_argument: state.lastOpponentText, topic: document.getElementById('motion').value }) });
+            const d = await res.json();
+            if (d.suggestions?.length > 0) {
+                document.getElementById('suggestionsPanel').style.display = 'block';
+                document.getElementById('suggestionsList').innerHTML = d.suggestions.map(s => `<div class="suggestion-item" onclick="useSuggestion('${s.replace(/'/g, "\\'")}')">${s}</div>`).join('');
+            }
+        } catch(e) {}
+    }, 1500);
+}
+function useSuggestion(s) { document.getElementById('userSpeech').value += ' ' + s; document.getElementById('suggestionsPanel').style.display = 'none'; }
+
+// ANALYTICS
+let chartInstances = {};
+async function loadAnalytics() {
+    try {
+        const [profileRes, skillRes, analyticsRes] = await Promise.all([
+            fetch(`/api/profile/?user_name=${encodeURIComponent(state.userName)}`),
+            fetch(`/api/analytics/skills/?user_name=${encodeURIComponent(state.userName)}`),
+            fetch(`/api/analytics/?user_name=${encodeURIComponent(state.userName)}`)
+        ]);
+        const profile = await profileRes.json();
+        const skillData = await skillRes.json();
+        const analytics = await analyticsRes.json();
+
+        document.getElementById('totalDebates').textContent = profile.total_debates;
+        document.getElementById('avgScore').textContent = profile.average_score;
+        document.getElementById('winRate').textContent = profile.win_rate + '%';
+        document.getElementById('bestScore').textContent = profile.highest_score;
+        renderBadges(profile.badges);
+        renderSkillRadar(skillData.skills);
+        if (analytics.has_data) { renderScoreHistory(analytics.score_history); renderFallacyChart(analytics.fallacy_counts); }
+    } catch(e) { console.error(e); }
+}
+
+function destroyChart(id) { if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; } }
+
+function renderSkillRadar(skills) {
+    destroyChart('skillRadar');
+    chartInstances['skillRadar'] = new Chart(document.getElementById('skillRadar').getContext('2d'), {
+        type: 'radar',
+        data: { labels: ['Logic','Evidence','Clarity','Persuasion','Counter-Arguments'], datasets: [{ label: 'Your Skills', data: [skills.logic, skills.evidence, skills.clarity, skills.persuasion, skills.counter_arguments], backgroundColor: 'rgba(59,91,219,0.15)', borderColor: 'rgba(59,91,219,1)', pointBackgroundColor: 'rgba(59,91,219,1)' }] },
+        options: { scales: { r: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+    });
+}
+function renderScoreHistory(history) {
+    destroyChart('scoreHistory');
+    chartInstances['scoreHistory'] = new Chart(document.getElementById('scoreHistory').getContext('2d'), {
+        type: 'line',
+        data: { labels: history.map(h => h.date.split('T')[0]), datasets: [{ label: 'Score', data: history.map(h => h.score), borderColor: 'rgba(59,91,219,1)', tension: 0.3, fill: true, backgroundColor: 'rgba(59,91,219,0.08)' }] },
+        options: { scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+    });
+}
+function renderFallacyChart(fallacies) {
+    destroyChart('fallacyChart');
+    chartInstances['fallacyChart'] = new Chart(document.getElementById('fallacyChart').getContext('2d'), {
+        type: 'bar',
+        data: { labels: Object.keys(fallacies).map(l => l.replace(/_/g,' ')), datasets: [{ label: 'Times Detected', data: Object.values(fallacies), backgroundColor: 'rgba(201,42,42,0.7)' }] },
+        options: { indexAxis: 'y', scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+    });
+}
+function renderBadges(userBadges) {
+    const ALL = { first_debate:{name:'First Steps'}, '10_debates':{name:'Debater'}, '50_debates':{name:'Veteran'}, first_win:{name:'Victor'}, '10_wins':{name:'Champion'}, perfect_score:{name:'Perfectionist'}, streak_3:{name:'On Fire'}, streak_7:{name:'Unstoppable'}, level_5:{name:'Rising Star'}, level_10:{name:'Master Debater'} };
+    document.getElementById('badgesGrid').innerHTML = Object.entries(ALL).map(([id, b]) => `<div class="${userBadges.includes(id) ? 'earned-badge' : 'locked-badge'}">${b.name}</div>`).join('');
+}
+
+// LEADERBOARD
+async function loadLeaderboard(timeframe) {
+    try {
+        const res = await fetch(`/api/leaderboard/?timeframe=${timeframe}&limit=20`);
+        const d = await res.json();
+        document.getElementById('leaderboardBody').innerHTML = d.leaderboard.map((e, i) =>
+            `<tr class="${['rank-gold','rank-silver','rank-bronze'][i] || ''}">
+                <td>${e.rank}</td><td>${e.user_name}</td><td>Lv.${e.level}</td><td>${e.xp}</td><td>${e.win_rate}%</td><td>${e.current_streak}d</td>
+            </tr>`).join('');
+        const rankRes = await fetch(`/api/leaderboard/rank/?user_name=${encodeURIComponent(state.userName)}`);
+        const rankData = await rankRes.json();
+        if (!rankData.error) { document.getElementById('rankDisplay').textContent = '#' + rankData.rank; document.getElementById('percentileDisplay').textContent = rankData.percentile + '%'; }
+    } catch(e) { console.error(e); }
+}
+
+// REPLAY
+async function loadSessionList() {
+    try {
+        const res = await fetch(`/api/sessions/?user_name=${encodeURIComponent(state.userName)}&limit=20`);
+        const d = await res.json();
+        document.getElementById('replaySelect').innerHTML = '<option value="">-- Select Session --</option>' +
+            d.sessions.map(s => `<option value="${s.session_id}">${s.topic.substring(0,35)} — Score: ${s.score} (${s.date.split('T')[0]})</option>`).join('');
+    } catch(e) { console.error(e); }
+}
+
+async function loadReplay() {
+    const sessionId = document.getElementById('replaySelect').value;
+    if (!sessionId) { document.getElementById('replayViewer').style.display = 'none'; return; }
+    try {
+        const res = await fetch(`/api/sessions/replay/?session_id=${sessionId}`);
+        state.replayData = await res.json();
+        state.replayIndex = 0;
+        document.getElementById('replayViewer').style.display = 'block';
+
+        // Populate summary
+        const d = state.replayData;
+        document.getElementById('replayTopic').textContent = d.topic || '—';
+        document.getElementById('replayScore').textContent = d.overall_score != null ? d.overall_score : '—';
+        document.getElementById('replayRounds').textContent = d.total_rounds != null ? d.total_rounds : '—';
+        document.getElementById('replayDifficulty').textContent = d.difficulty || '—';
+        document.getElementById('replayDate').textContent = d.created_at ? d.created_at.split('T')[0] : '—';
+        document.getElementById('replayUser').textContent = d.user_name || '—';
+
+        renderReplayStep();
+    } catch(e) { console.error(e); }
+}
+
+function renderReplayStep() {
+    if (!state.replayData) return;
+    const h = document.getElementById('replayHistory');
+    h.innerHTML = '';
+    const conv = state.replayData.conversation;
+    for (let i = 0; i <= state.replayIndex && i < conv.length; i++) {
+        const msg = conv[i];
+        const item = document.createElement('div');
+        item.className = `speech-item ${msg.role}`;
+        item.innerHTML = `<div class="speech-meta"><strong>${msg.role === 'ai' ? 'AI Opponent' : 'You'}</strong></div><div class="speech-content">${msg.content}</div>`;
+        h.appendChild(item);
+    }
+    document.getElementById('replayStep').textContent = `${state.replayIndex + 1}/${conv.length}`;
+    document.getElementById('replayProgress').style.width = `${((state.replayIndex + 1) / conv.length) * 100}%`;
+}
+function replayPrev() { if (state.replayIndex > 0) { state.replayIndex--; renderReplayStep(); } }
+function replayNext() { if (state.replayData && state.replayIndex < state.replayData.conversation.length - 1) { state.replayIndex++; renderReplayStep(); } }
+let replayInterval = null;
+function replayPlay() {
+    if (replayInterval) { clearInterval(replayInterval); replayInterval = null; return; }
+    replayInterval = setInterval(() => {
+        if (state.replayData && state.replayIndex < state.replayData.conversation.length - 1) { state.replayIndex++; renderReplayStep(); }
+        else { clearInterval(replayInterval); replayInterval = null; }
+    }, 2000);
+}
+
+// INIT
+document.addEventListener('DOMContentLoaded', async () => {
+    state.userName = localStorage.getItem('debateUserName') || 'Anonymous';
+    document.getElementById('userName').value = state.userName;
+    await Promise.all([loadPersonalities(), loadUserProfile(), loadDailyChallenge()]);
+    loadVoices();
+    initSpeechRecognition();
+    loadSessionList();
+});
+</script>
+{% endblock %}

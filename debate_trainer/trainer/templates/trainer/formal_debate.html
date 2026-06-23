@@ -1,0 +1,258 @@
+{% extends "trainer/base.html" %}
+{% block title %}Formal Debate Competition{% endblock %}
+
+{% block extra_head %}
+<style>
+    .debate-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .info-card { background: var(--white); padding: 14px; border-radius: var(--radius); text-align: center; border: 1px solid var(--border); border-left: 4px solid var(--primary); }
+    .info-card h3 { font-size: 0.78em; color: var(--grey); font-weight: 600; margin-bottom: 6px; }
+    .info-card .value { font-size: 1.3em; font-weight: 700; color: var(--dark); }
+
+    .speaker-turn { background: #fff3cd; border: 1px solid var(--warning); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; text-align: center; }
+    .speaker-turn .speaker-name { font-size: 1.1em; font-weight: 700; color: var(--primary); margin-top: 6px; }
+
+    .timer-box { background: var(--dark); color: #fff; padding: 18px; border-radius: var(--radius); text-align: center; margin-bottom: 16px; }
+    .timer-box .time-display { font-size: 2.8em; font-weight: bold; font-family: 'Courier New', monospace; }
+    .timer-box.warning { background: var(--danger); }
+
+    .speech-history { background: var(--bg); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; max-height: 380px; overflow-y: auto; border: 1px solid var(--border); }
+    .speech-item { background: var(--white); padding: 14px; border-left: 4px solid var(--primary); margin-bottom: 10px; border-radius: var(--radius); }
+    .speech-item.ai { border-left-color: var(--secondary); }
+    .speech-meta { font-size: 0.82em; color: var(--grey); margin-bottom: 6px; }
+    .speech-content { line-height: 1.6; font-size: 0.93em; }
+
+    .scores-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .score-card { background: var(--bg); padding: 16px; border-radius: var(--radius); text-align: center; border: 1px solid var(--border); }
+    .score-card h3 { font-size: 0.82em; color: var(--grey); margin-bottom: 8px; }
+    .score-card .score { font-size: 2em; font-weight: 800; color: var(--primary); }
+
+    #loadingState { display: none; align-items: center; gap: 10px; padding: 12px; background: var(--primary-light); border-left: 4px solid var(--primary); border-radius: var(--radius); margin-bottom: 12px; font-size: 0.88em; color: var(--primary); font-weight: 600; }
+    #loadingState.active { display: flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <!-- Setup -->
+    <div class="card" id="setupSection" style="margin-top: 24px;">
+        <div class="card-header">Configure Your Formal Debate</div>
+        <div class="card-body">
+            <form id="setupForm" onsubmit="startDebate(event)">
+                <div class="form-group">
+                    <label for="motion">Debate Motion</label>
+                    <textarea id="motion" rows="2" placeholder="e.g. Social media is beneficial to society" required></textarea>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="userName">Your Name</label>
+                        <input type="text" id="userName" placeholder="Anonymous" value="Anonymous">
+                    </div>
+                    <div class="form-group">
+                        <label for="userSide">Your Side</label>
+                        <select id="userSide">
+                            <option value="affirmative">Affirmative (For)</option>
+                            <option value="negative">Negative (Against)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="speakersPerSide">Speakers Per Side</label>
+                        <input type="number" id="speakersPerSide" value="2" min="1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="substantiveTime">Substantive Speech Time (min)</label>
+                        <input type="number" id="substantiveTime" value="8" min="1" max="30">
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="replyTime">Reply Speech Time (min)</label>
+                        <input type="number" id="replyTime" value="4" min="1" max="15">
+                    </div>
+                    <div class="form-group" style="justify-content: flex-end; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer;">
+                            <input type="checkbox" id="includeReplies" checked> Include Reply Speeches
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer;">
+                            <input type="checkbox" id="allowPOI" checked> Allow POI
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer;">
+                            <input type="checkbox" id="noNewArgs" checked> No New Args in Rebuttals
+                        </label>
+                    </div>
+                </div>
+                <div id="setupError"></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 4px;">Start Debate</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Debate interface -->
+    <div id="debateSection" style="display: none; margin-top: 24px;">
+        <div class="card">
+            <div class="card-body">
+                <div class="debate-info">
+                    <div class="info-card"><h3>Motion</h3><div class="value" id="motionDisplay" style="font-size: 0.9em;"></div></div>
+                    <div class="info-card"><h3>Your Side</h3><div class="value" id="userSideDisplay"></div></div>
+                    <div class="info-card"><h3>Progress</h3><div class="value" id="progressDisplay">0/0</div></div>
+                    <div class="info-card"><h3>Status</h3><div class="value" id="statusDisplay" style="font-size: 0.9em;">Starting...</div></div>
+                </div>
+                <div class="progress"><div class="progress-bar" id="progressBar" style="width: 0%"></div></div>
+            </div>
+        </div>
+
+        <div id="errorDiv" class="alert alert-danger" style="display: none; margin-top: 12px;"></div>
+
+        <div class="speaker-turn card" id="speakerTurn" style="margin-top: 12px; padding: 16px; text-align: center;"></div>
+
+        <div class="timer-box" id="timer" style="margin-top: 12px;">
+            <div class="time-display" id="timeDisplay">0:00</div>
+            <div style="font-size: 0.82em; opacity: 0.8; margin-top: 4px;">Time remaining</div>
+        </div>
+
+        <div id="loadingState" style="margin-top: 12px;">
+            <div class="spinner"></div>
+            <span>AI is preparing their speech...</span>
+        </div>
+
+        <div class="speech-history" id="speechHistory" style="margin-top: 12px;">
+            <p style="color: var(--grey); text-align: center; font-size: 0.88em;">Debate history will appear here...</p>
+        </div>
+
+        <div id="inputSection" style="margin-top: 12px;"></div>
+
+        <div class="scores-grid" id="scores" style="display: none;">
+            <div class="score-card"><h3>Your Score</h3><div class="score" id="userScore">0</div></div>
+            <div class="score-card"><h3>AI Score</h3><div class="score" id="aiScore">0</div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentSession = null;
+    let debateConfig = null;
+
+    function showError(msg) {
+        const el = document.getElementById('errorDiv');
+        el.textContent = msg;
+        el.style.display = 'block';
+        setTimeout(() => el.style.display = 'none', 5000);
+    }
+
+    function setLoading(show) {
+        document.getElementById('loadingState').classList.toggle('active', show);
+    }
+
+    async function startDebate(e) {
+        e.preventDefault();
+        const motion = document.getElementById('motion').value.trim();
+        const userName = document.getElementById('userName').value || 'Anonymous';
+        const userSide = document.getElementById('userSide').value;
+
+        try {
+            setLoading(true);
+            const createRes = await fetch('/api/formal/create/', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    motion, user_name: userName, format_type: 'custom',
+                    speakers_per_side: parseInt(document.getElementById('speakersPerSide').value),
+                    substantive_time: parseInt(document.getElementById('substantiveTime').value) * 60,
+                    reply_time: parseInt(document.getElementById('replyTime').value) * 60,
+                    include_replies: document.getElementById('includeReplies').checked,
+                    allow_poi: document.getElementById('allowPOI').checked,
+                    no_new_arguments: document.getElementById('noNewArgs').checked,
+                    user_side: userSide
+                })
+            });
+            if (!createRes.ok) throw new Error('Failed to create debate');
+            const createData = await createRes.json();
+            currentSession = createData.session_id;
+            debateConfig = createData;
+
+            document.getElementById('motionDisplay').textContent = motion.substring(0, 40);
+            document.getElementById('userSideDisplay').textContent = userSide;
+            document.getElementById('progressDisplay').textContent = `0/${createData.total_speeches}`;
+
+            const startRes = await fetch('/api/formal/start/', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: currentSession })
+            });
+            if (!startRes.ok) throw new Error('Failed to start debate');
+            const startData = await startRes.json();
+
+            addSpeechToHistory('ai', startData.current_speaker_side, 'substantive', startData.ai_opening_speech);
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('debateSection').style.display = 'block';
+            updateDebateStatus();
+        } catch (err) {
+            showError('Error starting debate: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function addSpeechToHistory(speaker, side, type, content) {
+        const h = document.getElementById('speechHistory');
+        if (h.querySelector('p')) h.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = `speech-item ${speaker}`;
+        item.innerHTML = `<div class="speech-meta"><strong>${speaker === 'ai' ? 'AI' : 'You'}</strong> (${side}, ${type})</div><div class="speech-content">${content}</div>`;
+        h.appendChild(item);
+        h.scrollTop = h.scrollHeight;
+    }
+
+    function updateDebateStatus() {
+        document.getElementById('speakerTurn').innerHTML = `
+            <div style="font-weight: 700; margin-bottom: 6px;">Your Turn to Speak</div>
+            <div style="font-size: 0.88em; color: var(--grey);">Prepare your substantive speech (${debateConfig.timing.substantive_seconds / 60} minutes)</div>
+        `;
+        document.getElementById('inputSection').innerHTML = `
+            <div class="form-group">
+                <label for="userSpeech">Your Speech</label>
+                <textarea id="userSpeech" rows="6" placeholder="Enter your speech here..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="submitSpeech()">Submit Speech</button>
+        `;
+    }
+
+    async function submitSpeech() {
+        const speech = document.getElementById('userSpeech').value.trim();
+        if (!speech) { showError('Please enter your speech'); return; }
+        setLoading(true);
+        try {
+            const res = await fetch('/api/formal/speech/', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: currentSession, speech, time_taken: 300, pois_received: [] })
+            });
+            if (!res.ok) throw new Error('Failed to submit speech');
+            const data = await res.json();
+
+            addSpeechToHistory('user', 'user', 'substantive', speech);
+
+            if (data.status === 'completed') {
+                document.getElementById('inputSection').innerHTML = `
+                    <div class="card" style="text-align: center; padding: 24px;">
+                        <h2 style="margin-bottom: 12px;">Debate Completed</h2>
+                        <p>Your Score: <strong>${data.scores.user_score}/100</strong></p>
+                        <p>AI Score: <strong>${data.scores.ai_score}/100</strong></p>
+                        <button class="btn btn-primary" style="margin-top: 16px;" onclick="location.reload()">Start New Debate</button>
+                    </div>`;
+            } else {
+                addSpeechToHistory('ai', data.next_speaker_side, data.next_speech_type, data.ai_speech);
+                updateDebateStatus();
+            }
+
+            document.getElementById('userScore').textContent = Math.round(data.current_scores.user_score);
+            document.getElementById('aiScore').textContent = Math.round(data.current_scores.ai_score);
+            document.getElementById('scores').style.display = 'grid';
+            document.getElementById('progressDisplay').textContent = `${data.progress.completed_speeches}/${data.progress.total_speeches}`;
+            document.getElementById('progressBar').style.width = data.progress.percent_complete + '%';
+        } catch (err) {
+            showError('Error: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+</script>
+{% endblock %}

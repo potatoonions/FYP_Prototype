@@ -1,4 +1,33 @@
-  
-# ML model files (too large for GitHub)  
-trainer/ml/saved_models/  
-*.pt 
+# Django
+db.sqlite3
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Static collected
+staticfiles/
+mediafiles/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# ML model files (too large for GitHub)
+trainer/ml/saved_models/
+*.pt
+

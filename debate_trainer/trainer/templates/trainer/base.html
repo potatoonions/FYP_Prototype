@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Debate Trainer{% endblock %}</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #3b5bdb;
+            --primary-light: #e7f0ff;
+            --secondary: #5c3d8f;
+            --success: #2f9e44;
+            --warning: #e67700;
+            --danger: #c92a2a;
+            --dark: #1a1a2e;
+            --grey: #6b7280;
+            --border: #d1d5db;
+            --bg: #f3f4f6;
+            --white: #ffffff;
+            --radius: 8px;
+            --shadow: 0 1px 4px rgba(0,0,0,0.12);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            color: #111827;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* Layout */
+        .page-header {
+            background: var(--dark);
+            color: #fff;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .page-header h1 { font-size: 1.2em; font-weight: 700; }
+        .page-header nav { display: flex; gap: 4px; margin-left: auto; }
+        .page-header nav a {
+            color: #9ca3af;
+            padding: 6px 14px;
+            border-radius: var(--radius);
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: background 0.15s, color 0.15s;
+        }
+        .page-header nav a:hover,
+        .page-header nav a.active {
+            background: var(--primary);
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .card-body { padding: 20px; }
+        .card-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 0.95em;
+            color: var(--dark);
+        }
+
+        /* Forms */
+        .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        label { font-weight: 600; font-size: 0.9em; color: #374151; }
+        input, select, textarea {
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.95em;
+            font-family: inherit;
+            background: var(--white);
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            text-decoration: none;
+        }
+        .btn:hover { opacity: 0.88; text-decoration: none; }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-secondary { background: #e5e7eb; color: #374151; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-sm { padding: 6px 12px; font-size: 0.85em; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* Status / alerts */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 0.9em;
+            margin-bottom: 16px;
+        }
+        .alert-info { background: var(--primary-light); border-left: 4px solid var(--primary); }
+        .alert-warning { background: #fff3cd; border-left: 4px solid var(--warning); }
+        .alert-danger { background: #ffebeb; border-left: 4px solid var(--danger); color: var(--danger); }
+        .alert-success { background: #d3f9d8; border-left: 4px solid var(--success); }
+
+        /* Spinner */
+        .spinner {
+            width: 28px; height: 28px;
+            border: 3px solid #e5e7eb;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Loading state */
+        .loading-state {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px;
+            color: var(--grey);
+            font-size: 0.9em;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+        .badge-primary { background: var(--primary-light); color: var(--primary); }
+        .badge-success { background: #d3f9d8; color: var(--success); }
+        .badge-danger { background: #ffebeb; color: var(--danger); }
+        .badge-warning { background: #fff3cd; color: var(--warning); }
+
+        /* Source type badges */
+        .source-type { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; font-weight: 600; text-transform: uppercase; }
+        .source-type.book { background: #d3f9d8; color: #2e7d32; }
+        .source-type.article { background: #e3f2fd; color: #1565c0; }
+        .source-type.report { background: #fff3e0; color: #e65100; }
+        .source-type.journal { background: #f3e5f5; color: #7b1fa2; }
+        .source-type.database { background: #fce4ec; color: #c2185b; }
+        .source-type.encyclopedia { background: #e0f7fa; color: #00838f; }
+
+        /* Source card */
+        .source-card {
+            padding: 12px;
+            border-radius: var(--radius);
+            border-left: 3px solid var(--primary);
+            background: var(--primary-light);
+            margin-bottom: 10px;
+        }
+        .source-title { font-weight: 600; font-size: 0.9em; margin-bottom: 4px; }
+        .source-meta { font-size: 0.8em; color: var(--grey); margin-bottom: 4px; }
+        .source-description { font-size: 0.8em; color: #555; margin-top: 4px; }
+
+        /* Issue cards (argument analysis) */
+        .issue-card { background: var(--white); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; border-left: 4px solid var(--primary); box-shadow: var(--shadow); }
+        .issue-card.fallacy { border-left-color: var(--danger); }
+        .issue-card.weak_argument { border-left-color: var(--warning); }
+        .issue-card.unsupported_claim { border-left-color: #2196f3; }
+        .issue-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .issue-type-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600; text-transform: uppercase; }
+        .issue-type-badge.fallacy { background: #ffebee; color: var(--danger); }
+        .issue-type-badge.weak_argument { background: #fff3e0; color: var(--warning); }
+        .issue-type-badge.unsupported_claim { background: #e3f2fd; color: #1565c0; }
+        .issue-severity { margin-left: auto; font-size: 0.75em; padding: 2px 7px; border-radius: 4px; }
+        .issue-severity.high { background: #ffcdd2; color: #b71c1c; }
+        .issue-severity.medium { background: #ffe0b2; color: #e65100; }
+        .issue-severity.low { background: #c8e6c9; color: #2e7d32; }
+        .issue-quote { background: #f5f5f5; padding: 8px 10px; border-radius: 4px; font-size: 0.85em; color: #555; margin-bottom: 8px; border-left: 3px solid #ddd; font-style: italic; }
+        .issue-description { font-size: 0.85em; color: var(--grey); margin-bottom: 6px; }
+        .issue-suggestion { background: #d3f9d8; padding: 8px 10px; border-radius: 4px; font-size: 0.82em; color: #2e7d32; }
+        .strength-badge { display: inline-block; padding: 3px 10px; background: #d3f9d8; color: #2e7d32; border-radius: 12px; font-size: 0.8em; margin: 2px; }
+
+        /* Progress bar */
+        .progress { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--primary); transition: width 0.3s; }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .page-header nav a span { display: none; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header class="page-header">
+        <h1>AI Debate Trainer</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/debate/">Debate</a>
+            <a href="/api/formal/">Formal</a>
+            <a href="/api-docs/">API</a>
+        </nav>
+    </header>
+    {% block content %}{% endblock %}
+</body>
+</html>

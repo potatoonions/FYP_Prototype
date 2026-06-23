@@ -1,6 +1,10 @@
 from django.urls import path
 
 from .views import (
+    home_view,
+    debate_chat_view,
+    formal_debate_basic_view,
+    formal_debate_enhanced_view,
     start_debate,
     submit_user_response,
     end_debate,
@@ -12,8 +16,6 @@ from .formal_debate_api import (
     submit_formal_speech,
     get_formal_debate_status,
 )
-from .formal_debate_ui import formal_debate_view as formal_debate_basic
-from .formal_debate_ui_enhanced import formal_debate_view as formal_debate_enhanced
 from .gamification_api import (
     get_user_profile,
     award_xp,
@@ -37,8 +39,8 @@ urlpatterns = [
     path("debate/history/", get_debate_history, name="debate_history"),
     
     # Formal debate competition interface (enhanced is default)
-    path("formal/", formal_debate_enhanced, name="formal_debate"),
-    path("formal/basic/", formal_debate_basic, name="formal_debate_basic"),
+    path("formal/", formal_debate_enhanced_view, name="formal_debate"),
+    path("formal/basic/", formal_debate_basic_view, name="formal_debate_basic"),
     path("formal/create/", create_formal_debate, name="create_formal_debate"),
     path("formal/start/", start_formal_debate, name="start_formal_debate"),
     path("formal/speech/", submit_formal_speech, name="submit_formal_speech"),

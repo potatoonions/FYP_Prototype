@@ -10,7 +10,7 @@ import uuid
 import logging
 
 from .models import FormalDebateConfig, FormalDebateSession
-from .services import from_settings, DebateFlowEngine, SpeechAnalyzer, analyze_argument_with_ml
+from ._services_core import from_settings, DebateFlowEngine, SpeechAnalyzer, analyze_argument_with_ml
 from .validators import validate_json_payload, validate_string_field
 from .rate_limit import rate_limit
 

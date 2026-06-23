@@ -745,16 +745,17 @@ class AgenticDebateAgent:
             source_instruction = "When making claims, reference which source supports your point using format: 'According to [Source Title]...' or 'Research from [Source] shows...'. Include at least one source reference. "
 
         system = (
-            f"{style} You are the NEGATIVE side in a formal debate. "
-            f"Topic: '{topic}'. Difficulty: {difficulty}. {source_instruction}"
-            f"Deliver a structured NEGATIVE CONSTRUCTIVE SPEECH (max 150 words) with:\n"
-            f"1. A clear statement OPPOSING the motion\n"
+            f"{style} You are the AFFIRMATIVE (proposition) side in a formal debate. "
+            f"The user will argue AGAINST this motion — you must argue FOR it. "
+            f"Motion: '{topic}'. Difficulty: {difficulty}. {source_instruction}"
+            f"Deliver a structured AFFIRMATIVE CONSTRUCTIVE SPEECH (max 150 words) with:\n"
+            f"1. A clear statement SUPPORTING the motion\n"
             f"2. Two or three numbered contentions with brief evidence or reasoning\n"
-            f"3. A closing line on the burden the affirmative must meet\n"
+            f"3. A closing line stating what the negative side must prove to defeat you\n"
             f"Do NOT ask questions. Do NOT critique an opponent yet — just build YOUR case."
         )
         sources_text = self._format_sources_for_prompt(sources)
-        user_prompt = f"Topic: {topic}\nContext: {research_summary[:300]}\n{sources_text}\nNegative constructive speech (150 words max, cite sources where possible):"
+        user_prompt = f"Motion: {topic}\nContext: {research_summary[:300]}\n{sources_text}\nAffirmative constructive speech (150 words max, cite sources where possible):"
         response = self._call_model(system, user_prompt)
 
         return {"text": response, "sources_used": sources[:3] if sources else [], "personality": personality, "difficulty": difficulty}
@@ -767,19 +768,20 @@ class AgenticDebateAgent:
             source_instruction = "Reference sources using format: 'According to [Source]...' or 'As [Source] demonstrates...'. "
 
         system = (
-            f"{style} You are the NEGATIVE side in a formal debate, delivering Round {round_number} rebuttal. "
+            f"{style} You are the AFFIRMATIVE (proposition) side in a formal debate, delivering Round {round_number} rebuttal. "
+            f"The user is arguing AGAINST the motion — you are arguing FOR it. "
             f"Difficulty: {difficulty}. {source_instruction}"
             f"Structure your response (max 120 words) as:\n"
-            f"**Critique of their speech:** Identify and rebut the weakest point in their argument (be specific, name the flaw).\n"
-            f"**Negative rebuttal:** Reinforce or extend ONE of your own negative contentions with evidence.\n"
-            f"Do NOT just ask questions — make a positive case for the negative side. "
+            f"**Critique of their speech:** Identify and rebut the weakest point in the user's NEGATIVE argument (be specific, name the flaw).\n"
+            f"**Affirmative rebuttal:** Reinforce or extend ONE of your own AFFIRMATIVE contentions with evidence.\n"
+            f"Do NOT just ask questions — make a positive case FOR the motion. "
             f"After your speech, add a brief 'COACH NOTE:' (1-2 sentences) pointing out the single biggest weakness in the user's argument."
         )
         sources_text = self._format_sources_for_prompt(sources)
         user_prompt = (
-            f"Topic: {topic}\nNegative position so far: {ai_opening[:200]}\n"
-            f"User's speech: {user_argument}\n{sources_text}\n"
-            f"Negative rebuttal speech + coach note (120 words max):"
+            f"Motion: {topic}\nAffirmative position so far: {ai_opening[:200]}\n"
+            f"User's negative speech: {user_argument}\n{sources_text}\n"
+            f"Affirmative rebuttal speech + coach note (120 words max):"
         )
         counter = self._call_model(system, user_prompt)
         return {"counter_argument": counter, "round": round_number, "personality": personality, "sources_used": sources[:3] if sources else []}

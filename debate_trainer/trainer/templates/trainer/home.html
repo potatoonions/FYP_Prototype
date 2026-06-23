@@ -1,0 +1,47 @@
+{% extends "trainer/base.html" %}
+{% block title %}AI Debate Trainer - API Docs{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <div class="card" style="margin-top: 32px;">
+        <div class="card-header">API Reference</div>
+        <div class="card-body">
+            <p style="color: var(--grey); margin-bottom: 24px;">Multi-turn debate with AI research integration and real-time scoring.</p>
+
+            <h2 style="font-size: 1em; font-weight: 700; margin-bottom: 12px; color: var(--dark);">Core Endpoints</h2>
+
+            <div class="alert alert-info" style="margin-bottom: 10px;">
+                <span class="badge badge-success" style="margin-right: 8px;">POST</span>
+                <strong>/api/debate/start/</strong>
+                <p style="margin-top: 6px; font-size: 0.85em; color: #374151;">Initialize a debate session with research and AI opening position.</p>
+                <pre style="background: #f3f4f6; padding: 10px; border-radius: 6px; font-size: 0.82em; margin-top: 8px; overflow-x: auto;">{ "topic": "AI Ethics", "user_name": "John", "difficulty": "medium" }</pre>
+            </div>
+
+            <div class="alert alert-info" style="margin-bottom: 10px;">
+                <span class="badge badge-success" style="margin-right: 8px;">POST</span>
+                <strong>/api/debate/response/</strong>
+                <p style="margin-top: 6px; font-size: 0.85em; color: #374151;">Submit your response and get AI counter-argument with feedback.</p>
+                <pre style="background: #f3f4f6; padding: 10px; border-radius: 6px; font-size: 0.82em; margin-top: 8px; overflow-x: auto;">{ "session_id": "...", "response": "Your argument..." }</pre>
+            </div>
+
+            <div class="alert alert-info" style="margin-bottom: 10px;">
+                <span class="badge badge-success" style="margin-right: 8px;">POST</span>
+                <strong>/api/debate/end/</strong>
+                <p style="margin-top: 6px; font-size: 0.85em; color: #374151;">End debate and get final summary.</p>
+            </div>
+
+            <div class="alert alert-info" style="margin-bottom: 24px;">
+                <span class="badge badge-primary" style="margin-right: 8px;">GET</span>
+                <strong>/api/debate/history/?session_id=...</strong>
+                <p style="margin-top: 6px; font-size: 0.85em; color: #374151;">Retrieve complete debate history and scores.</p>
+            </div>
+
+            <div class="btn-group">
+                <a href="/debate/" class="btn btn-primary">Start Debate</a>
+                <a href="/api/formal/" class="btn btn-secondary">Formal Debate</a>
+                <a href="/admin/" class="btn btn-secondary">Admin</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

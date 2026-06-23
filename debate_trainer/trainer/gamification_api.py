@@ -14,7 +14,7 @@ import logging
 from .models import UserProfile, DebateRound, FormalDebateSession
 from .validators import validate_json_payload, validate_string_field
 from .rate_limit import rate_limit
-from .services import AI_PERSONALITIES
+from ._services_core import AI_PERSONALITIES
 
 logger = logging.getLogger("trainer.gamification")
 
@@ -484,7 +484,7 @@ def get_ai_personalities(request):
 def get_rebuttal_suggestions(request):
     """Get real-time rebuttal suggestions as user types."""
     from django.conf import settings
-    from .services import from_settings
+    from ._services_core import from_settings
     
     payload, error = validate_json_payload(request)
     if error:

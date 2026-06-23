@@ -6,13 +6,14 @@ import uuid
 from typing import Any, Dict
 
 from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.views.decorators.http import require_GET, require_http_methods
 from django.core.cache import cache
 
 from .models import DebateSession, DebateRound
-from .services import from_settings, analyze_argument, analyze_argument_detailed, analyze_argument_with_ml, get_research_context, get_reference_sources
+from ._services_core import from_settings, analyze_argument, analyze_argument_detailed, analyze_argument_with_ml, get_research_context, get_reference_sources
 from .validators import (
     validate_json_payload,
     validate_string_field,
@@ -32,69 +33,7 @@ def _json_error(message: str, status: int = 400) -> JsonResponse:
 @require_GET
 def home_view(request: HttpRequest) -> HttpResponse:
     """API documentation page (accessible at /api-docs/)."""
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AI Debate Trainer API</title>
-        <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 40px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: #333; }
-            .container { background: white; border-radius: 12px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-            h1 { color: #667eea; margin-top: 0; font-size: 2.2em; }
-            h2 { color: #764ba2; margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-            .endpoint { background: #f8f9fa; padding: 15px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #667eea; }
-            .method { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.85em; margin-right: 10px; color: white; }
-            .method.post { background: #28a745; }
-            .method.get { background: #007bff; }
-            code { background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
-            pre { background: #f8f9fa; padding: 12px; border-radius: 6px; overflow-x: auto; }
-            .links { margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee; }
-            .links a { color: #667eea; text-decoration: none; margin-right: 20px; font-weight: 500; }
-            .links a:hover { text-decoration: underline; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>🎯 AI Debate Trainer API</h1>
-            <p>Multi-turn debate with AI research integration and real-time scoring.</p>
-            
-            <h2>Core Endpoints</h2>
-            
-            <div class="endpoint">
-                <span class="method post">POST</span> <strong>/api/debate/start/</strong>
-                <p>Initialize a debate session with research and AI opening position.</p>
-                <pre><code>{ "topic": "AI Ethics", "user_name": "John", "difficulty": "medium" }</code></pre>
-            </div>
-            
-            <div class="endpoint">
-                <span class="method post">POST</span> <strong>/api/debate/response/</strong>
-                <p>Submit your response and get AI counter-argument with feedback.</p>
-                <pre><code>{ "session_id": "...", "response": "Your argument..." }</code></pre>
-            </div>
-            
-            <div class="endpoint">
-                <span class="method post">POST</span> <strong>/api/debate/end/</strong>
-                <p>End debate and get final summary.</p>
-            </div>
-            
-            <div class="endpoint">
-                <span class="method get">GET</span> <strong>/api/debate/history/?session_id=...</strong>
-                <p>Retrieve complete debate history and scores.</p>
-            </div>
-            
-            <div class="links">
-                <strong>Quick Links:</strong>
-                <a href="/">🎮 Start Debate</a>
-                <a href="/admin/">⚙️ Admin</a>
-                <a href="/api/formal/">🏆 Formal Debate</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    return HttpResponse(html_content)
+    return render(request, 'trainer/home.html')
 
 
 # ============================================================================
@@ -453,3 +392,25 @@ def get_debate_history(request: HttpRequest) -> JsonResponse:
         return _json_error("An error occurred retrieving debate history", status=500)
 
 
+# ============================================================================
+# UI Views
+# ============================================================================
+
+@require_GET
+def home_view(request: HttpRequest) -> HttpResponse:
+    return render(request, 'trainer/home.html')
+
+
+@require_GET
+def debate_chat_view(request: HttpRequest) -> HttpResponse:
+    return render(request, 'trainer/debate_chat.html')
+
+
+@require_GET
+def formal_debate_basic_view(request: HttpRequest) -> HttpResponse:
+    return render(request, 'trainer/formal_debate.html')
+
+
+@require_GET
+def formal_debate_enhanced_view(request: HttpRequest) -> HttpResponse:
+    return render(request, 'trainer/formal_debate_enhanced.html')

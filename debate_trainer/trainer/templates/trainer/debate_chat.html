@@ -1,0 +1,366 @@
+{% extends "trainer/base.html" %}
+{% block title %}AI Debate Trainer - Debate{% endblock %}
+
+{% block extra_head %}
+<style>
+    .layout {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 20px;
+        align-items: start;
+    }
+    @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } }
+
+    .conversation {
+        min-height: 320px;
+        max-height: 480px;
+        overflow-y: auto;
+        padding: 12px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 12px;
+    }
+    .message { padding: 12px; border-radius: var(--radius); margin-bottom: 10px; border-left: 4px solid transparent; }
+    .message.ai   { background: var(--primary-light); border-left-color: var(--primary); }
+    .message.user { background: #d3f9d8; border-left-color: var(--success); margin-left: 24px; }
+    .message.system { background: #fff3cd; border-left-color: var(--warning); }
+    .message-role { font-weight: 700; font-size: 0.8em; color: var(--grey); margin-bottom: 4px; }
+    .message-content { font-size: 0.92em; line-height: 1.6; white-space: pre-wrap; }
+
+    .sidebar-section { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .sidebar-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .tab-nav { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 12px; }
+    .tab-btn {
+        flex: 1; padding: 8px 6px; background: none; border: none; cursor: pointer;
+        font-weight: 600; font-size: 0.82em; color: var(--grey);
+        border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .score-display { font-size: 2.2em; font-weight: 800; color: var(--primary); text-align: center; margin: 8px 0; }
+
+    .analysis-summary { background: var(--primary-light); padding: 12px; border-radius: var(--radius); margin-bottom: 12px; text-align: center; }
+    .analysis-score { font-size: 1.8em; font-weight: 800; color: var(--primary); }
+    .issue-counts { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+    .issue-count-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600; }
+    .issue-count-badge.fallacy { background: #ffebee; color: var(--danger); }
+    .issue-count-badge.weak { background: #fff3e0; color: var(--warning); }
+    .issue-count-badge.unsupported { background: #e3f2fd; color: #1565c0; }
+
+    .no-content { text-align: center; color: var(--grey); padding: 20px; font-size: 0.88em; font-style: italic; }
+
+    /* Loading indicator */
+    #loadingState {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        background: var(--primary-light);
+        border-radius: var(--radius);
+        border-left: 4px solid var(--primary);
+        margin-bottom: 12px;
+        font-size: 0.88em;
+        color: var(--primary);
+        font-weight: 600;
+    }
+    #loadingState.active { display: flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div id="setupPanel" style="max-width: 560px; margin: 32px auto;">
+        <div class="card">
+            <div class="card-header">Start a Debate</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="topicInput">Debate Topic</label>
+                    <input type="text" id="topicInput" placeholder="e.g. AI should be regulated by governments" value="Artificial Intelligence Ethics">
+                </div>
+                <div class="form-group">
+                    <label for="difficulty">Difficulty</label>
+                    <select id="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div id="setupStatus"></div>
+                <button class="btn btn-primary" onclick="startDebate()" style="width: 100%;">Start Debate</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="debatePanel" style="display: none;">
+        <div class="layout">
+            <!-- Main debate area -->
+            <div>
+                <div id="loadingState">
+                    <div class="spinner"></div>
+                    <span id="loadingMsg">Processing...</span>
+                </div>
+
+                <div class="conversation" id="conversation"></div>
+
+                <div id="responseSection">
+                    <div class="form-group">
+                        <label for="userResponse">Your Response</label>
+                        <textarea id="userResponse" rows="4" placeholder="Type your argument... (Shift+Enter to submit)"></textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="submitResponse()" id="submitBtn">Submit Response</button>
+                        <button class="btn btn-secondary" onclick="endDebate()">End Debate</button>
+                    </div>
+                    <div id="feedbackBanner" style="display: none; margin-top: 12px;"></div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="card" id="sidebar" style="display: none;">
+                <div class="card-body" style="padding: 14px;">
+                    <div class="sidebar-section">
+                        <div style="font-size: 0.82em; color: var(--grey);">Topic</div>
+                        <div style="font-weight: 600; font-size: 0.9em;" id="sidebarTopic"></div>
+                        <div style="margin-top: 6px; font-size: 0.82em; color: var(--grey);">Difficulty: <span id="sidebarDifficulty"></span> &nbsp;|&nbsp; Round: <span id="sidebarRound">1</span></div>
+                    </div>
+                    <div class="sidebar-section">
+                        <div style="font-size: 0.82em; color: var(--grey); margin-bottom: 4px;">Score</div>
+                        <div class="score-display" id="currentScore">—</div>
+                    </div>
+                    <div class="tab-nav">
+                        <button class="tab-btn active" onclick="switchTab(event, 'sources')">Sources</button>
+                        <button class="tab-btn" onclick="switchTab(event, 'analysis')">Analysis</button>
+                    </div>
+                    <div id="sourcesTab" class="tab-content active">
+                        <div id="referenceSources"><div class="no-content">Sources appear when debate starts</div></div>
+                    </div>
+                    <div id="analysisTab" class="tab-content">
+                        <div id="analysisContent"><div class="no-content">Submit a response to see analysis</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let sessionId = null;
+    let currentRound = 1;
+    let isWaiting = false;
+
+    function setLoading(show, msg) {
+        const el = document.getElementById('loadingState');
+        el.classList.toggle('active', show);
+        if (msg) document.getElementById('loadingMsg').textContent = msg;
+        document.getElementById('submitBtn').disabled = show;
+        document.getElementById('userResponse').disabled = show;
+    }
+
+    function showSetupStatus(msg, type) {
+        const el = document.getElementById('setupStatus');
+        el.innerHTML = `<div class="alert alert-${type}" style="margin-bottom: 12px;">${msg}</div>`;
+    }
+
+    function addMessage(role, content) {
+        const conv = document.getElementById('conversation');
+        const msg = document.createElement('div');
+        msg.className = 'message ' + role;
+        const label = role === 'ai' ? 'AI Opponent' : role === 'user' ? 'You' : 'Info';
+        msg.innerHTML = `<div class="message-role">${label}</div><div class="message-content">${content}</div>`;
+        conv.appendChild(msg);
+        conv.scrollTop = conv.scrollHeight;
+    }
+
+    function switchTab(event, tabName) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(tabName + 'Tab').classList.add('active');
+    }
+
+    function renderSources(sources) {
+        const container = document.getElementById('referenceSources');
+        if (!sources || sources.length === 0) {
+            container.innerHTML = '<div class="no-content">No sources available</div>';
+            return;
+        }
+        container.innerHTML = sources.map(s => {
+            const typeClass = (s.type || 'article').toLowerCase();
+            const titleHtml = s.url ? `<a href="${s.url}" target="_blank" rel="noopener">${s.title || 'Source'}</a>` : (s.title || 'Source');
+            return `
+                <div class="source-card">
+                    <div class="source-title">${titleHtml}</div>
+                    <div class="source-meta">
+                        <span class="source-type ${typeClass}">${s.type || 'source'}</span>
+                        ${s.authors ? s.authors.slice(0,2).join(', ') : ''} ${s.year ? `(${s.year})` : ''}
+                    </div>
+                    ${s.description ? `<div class="source-description">${s.description}</div>` : ''}
+                </div>`;
+        }).join('');
+    }
+
+    function renderAnalysis(detailed, aiCritique) {
+        const container = document.getElementById('analysisContent');
+        if (!detailed && !aiCritique) {
+            container.innerHTML = '<div class="no-content">Submit a response to see analysis</div>';
+            return;
+        }
+
+        let allIssues = [...(detailed?.issues || [])];
+        if (aiCritique?.ai_issues) {
+            aiCritique.ai_issues.forEach(i => {
+                if (!allIssues.some(x => x.matched_text === i.matched_text)) allIssues.push(i);
+            });
+        }
+
+        const score = detailed ? Math.round(detailed.overall_score * 100) : 50;
+        const counts = detailed?.issue_counts || {};
+
+        let html = `
+            <div class="analysis-summary">
+                <div class="analysis-score">${score}%</div>
+                <div style="font-size: 0.82em; color: var(--grey); margin-top: 4px;">${detailed?.summary || ''}</div>
+                <div class="issue-counts">
+                    ${(counts.fallacies > 0) ? `<span class="issue-count-badge fallacy">${counts.fallacies} Fallacy</span>` : ''}
+                    ${(counts.weak_arguments > 0) ? `<span class="issue-count-badge weak">${counts.weak_arguments} Weak</span>` : ''}
+                    ${(counts.unsupported_claims > 0) ? `<span class="issue-count-badge unsupported">${counts.unsupported_claims} Unsupported</span>` : ''}
+                </div>
+            </div>`;
+
+        if (allIssues.length === 0) {
+            html += '<div class="no-content" style="color: var(--success);">No major issues detected.</div>';
+        } else {
+            allIssues.forEach(issue => {
+                const t = issue.issue_type || 'weak_argument';
+                const sev = issue.severity || 'medium';
+                html += `
+                    <div class="issue-card ${t}">
+                        <div class="issue-header">
+                            <span class="issue-type-badge ${t}">${t.replace('_', ' ')}</span>
+                            <span style="font-weight: 600; font-size: 0.88em;">${issue.name || ''}</span>
+                            <span class="issue-severity ${sev}">${sev}</span>
+                        </div>
+                        ${issue.matched_text ? `<div class="issue-quote">"${issue.matched_text}"</div>` : ''}
+                        ${issue.description ? `<div class="issue-description">${issue.description}</div>` : ''}
+                        ${issue.suggestion ? `<div class="issue-suggestion">${issue.suggestion}</div>` : ''}
+                    </div>`;
+            });
+        }
+
+        if (detailed?.strengths?.length > 0) {
+            html += `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                <div style="font-weight: 600; font-size: 0.85em; color: var(--success); margin-bottom: 6px;">Strengths</div>
+                ${detailed.strengths.map(s => `<span class="strength-badge">${s.replace('_', ' ')}</span>`).join('')}
+            </div>`;
+        }
+
+        container.innerHTML = html;
+        // Auto-switch to analysis tab
+        document.querySelectorAll('.tab-btn')[1].click();
+    }
+
+    async function startDebate() {
+        const topic = document.getElementById('topicInput').value.trim();
+        const difficulty = document.getElementById('difficulty').value;
+        if (!topic) { showSetupStatus('Please enter a debate topic', 'warning'); return; }
+
+        showSetupStatus('<div class="loading-state"><div class="spinner"></div> Researching topic and generating opening position...</div>', 'info');
+
+        try {
+            const res = await fetch('/api/debate/start/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic, user_name: 'Debater', difficulty })
+            });
+            if (!res.ok) throw new Error((await res.json()).error || 'Failed to start debate');
+            const data = await res.json();
+
+            sessionId = data.session_id;
+            currentRound = 1;
+
+            document.getElementById('setupPanel').style.display = 'none';
+            document.getElementById('debatePanel').style.display = 'block';
+            document.getElementById('sidebar').style.display = 'block';
+            document.getElementById('sidebarTopic').textContent = topic;
+            document.getElementById('sidebarDifficulty').textContent = difficulty;
+
+            if (data.research_context?.summary) addMessage('system', data.research_context.summary);
+            addMessage('ai', data.ai_opening_position);
+            if (data.reference_sources) renderSources(data.reference_sources);
+
+        } catch (err) {
+            showSetupStatus('Error: ' + err.message, 'danger');
+        }
+    }
+
+    async function submitResponse() {
+        const response = document.getElementById('userResponse').value.trim();
+        if (!response) return;
+        if (!sessionId) return;
+
+        setLoading(true, 'AI is formulating a response...');
+
+        try {
+            const res = await fetch('/api/debate/response/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId, response })
+            });
+            if (!res.ok) throw new Error((await res.json()).error || 'Failed to process response');
+            const data = await res.json();
+
+            addMessage('user', response);
+            addMessage('ai', data.ai_counter_argument);
+            document.getElementById('userResponse').value = '';
+
+            if (data.sources_cited?.length > 0) renderSources(data.sources_cited);
+            renderAnalysis(data.detailed_analysis, data.ai_critique);
+
+            document.getElementById('currentScore').textContent = data.overall_score;
+            currentRound = data.next_round;
+            document.getElementById('sidebarRound').textContent = currentRound;
+
+            const fb = document.getElementById('feedbackBanner');
+            fb.style.display = 'block';
+            fb.innerHTML = `<div class="alert alert-info">${data.coach_feedback}</div>`;
+
+        } catch (err) {
+            const fb = document.getElementById('feedbackBanner');
+            fb.style.display = 'block';
+            fb.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function endDebate() {
+        if (!sessionId) return;
+        try {
+            const res = await fetch('/api/debate/end/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                addMessage('system', `Debate ended. Final score: ${data.overall_score} over ${data.total_rounds} round(s).`);
+                document.getElementById('responseSection').style.display = 'none';
+                sessionId = null;
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('userResponse').addEventListener('keydown', e => {
+            if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); submitResponse(); }
+        });
+    });
+</script>
+{% endblock %}
