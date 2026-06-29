@@ -649,7 +649,7 @@ async function startDebate() {
     try {
         const res = await fetch('/api/debate/start/', {
             method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ topic: motion, user_name: state.userName, difficulty: document.getElementById('difficulty').value, personality: state.selectedPersonality })
+            body: JSON.stringify({ topic: motion, user_name: state.userName, difficulty: document.getElementById('difficulty').value, personality: state.selectedPersonality, user_side: document.getElementById('userSide').value })
         });
         const d = await res.json();
         if (d.error) throw new Error(d.error);

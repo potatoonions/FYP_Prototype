@@ -737,21 +737,35 @@ class AgenticDebateAgent:
         system = "You are an argument analyst. Give BRIEF feedback (max 60 words total):\n• Strength: [1 sentence]\n• Weakness: [1 sentence]\n• Tip: [1 sentence]"
         return self._call_model(system, user_argument)
 
-    def generate_opening_position(self, topic: str, research_summary: str, difficulty: str = "medium", personality: str = "balanced", sources: list = None) -> Dict[str, object]:
+    def generate_opening_position(self, topic: str, research_summary: str, difficulty: str = "medium", personality: str = "balanced", sources: list = None, ai_side: str = "affirmative") -> Dict[str, object]:
         style = AI_PERSONALITIES.get(personality, AI_PERSONALITIES["balanced"])["style"]
         sources = sources or []
         source_instruction = ""
         if sources:
             source_instruction = "When making claims, reference which source supports your point using format: 'According to [Source Title]...' or 'Research from [Source] shows...'. Include at least one source reference. "
 
+        ai_side = (ai_side or "affirmative").lower()
+        if ai_side == "negative":
+            side_label = "NEGATIVE (opposition)"
+            ai_stance, user_stance = "argue AGAINST", "argue FOR"
+            speech_label = "NEGATIVE CONSTRUCTIVE SPEECH"
+            support_line = "A clear statement OPPOSING the motion"
+            opponent_label = "affirmative"
+        else:
+            side_label = "AFFIRMATIVE (proposition)"
+            ai_stance, user_stance = "argue FOR", "argue AGAINST"
+            speech_label = "AFFIRMATIVE CONSTRUCTIVE SPEECH"
+            support_line = "A clear statement SUPPORTING the motion"
+            opponent_label = "negative"
+
         system = (
-            f"{style} You are the AFFIRMATIVE (proposition) side in a formal debate. "
-            f"The user will argue AGAINST this motion — you must argue FOR it. "
+            f"{style} You are the {side_label} side in a formal debate. "
+            f"The user will {user_stance} this motion — you must {ai_stance} it. "
             f"Motion: '{topic}'. Difficulty: {difficulty}. {source_instruction}"
-            f"Deliver a structured AFFIRMATIVE CONSTRUCTIVE SPEECH (max 150 words) with:\n"
-            f"1. A clear statement SUPPORTING the motion\n"
+            f"Deliver a structured {speech_label} (max 150 words) with:\n"
+            f"1. {support_line}\n"
             f"2. Two or three numbered contentions with brief evidence or reasoning\n"
-            f"3. A closing line stating what the negative side must prove to defeat you\n"
+            f"3. A closing line stating what the {opponent_label} side must prove to defeat you\n"
             f"Do NOT ask questions. Do NOT critique an opponent yet — just build YOUR case."
         )
         sources_text = self._format_sources_for_prompt(sources)
@@ -760,21 +774,37 @@ class AgenticDebateAgent:
 
         return {"text": response, "sources_used": sources[:3] if sources else [], "personality": personality, "difficulty": difficulty}
 
-    def generate_counter_response(self, topic: str, ai_opening: str, user_argument: str, round_number: int, difficulty: str = "medium", personality: str = "balanced", sources: list = None) -> Dict[str, object]:
+    def generate_counter_response(self, topic: str, ai_opening: str, user_argument: str, round_number: int, difficulty: str = "medium", personality: str = "balanced", sources: list = None, ai_side: str = "affirmative") -> Dict[str, object]:
         style = AI_PERSONALITIES.get(personality, AI_PERSONALITIES["balanced"])["style"]
         sources = sources or []
         source_instruction = ""
         if sources:
             source_instruction = "Reference sources using format: 'According to [Source]...' or 'As [Source] demonstrates...'. "
 
+        ai_side = (ai_side or "affirmative").lower()
+        if ai_side == "negative":
+            side_label = "NEGATIVE (opposition)"
+            ai_stance, user_stance = "argue AGAINST", "arguing FOR"
+            user_side_label = "AFFIRMATIVE"
+            rebuttal_label = "Negative rebuttal"
+            own_label = "NEGATIVE"
+            case_direction = "AGAINST"
+        else:
+            side_label = "AFFIRMATIVE (proposition)"
+            ai_stance, user_stance = "argue FOR", "arguing AGAINST"
+            user_side_label = "NEGATIVE"
+            rebuttal_label = "Affirmative rebuttal"
+            own_label = "AFFIRMATIVE"
+            case_direction = "FOR"
+
         system = (
-            f"{style} You are the AFFIRMATIVE (proposition) side in a formal debate, delivering Round {round_number} rebuttal. "
-            f"The user is arguing AGAINST the motion — you are arguing FOR it. "
+            f"{style} You are the {side_label} side in a formal debate, delivering Round {round_number} rebuttal. "
+            f"The user is {user_stance} the motion — you are arguing {'FOR' if ai_side != 'negative' else 'AGAINST'} it. "
             f"Difficulty: {difficulty}. {source_instruction}"
             f"Structure your response (max 120 words) as:\n"
-            f"**Critique of their speech:** Identify and rebut the weakest point in the user's NEGATIVE argument (be specific, name the flaw).\n"
-            f"**Affirmative rebuttal:** Reinforce or extend ONE of your own AFFIRMATIVE contentions with evidence.\n"
-            f"Do NOT just ask questions — make a positive case FOR the motion. "
+            f"**Critique of their speech:** Identify and rebut the weakest point in the user's {user_side_label} argument (be specific, name the flaw).\n"
+            f"**{rebuttal_label}:** Reinforce or extend ONE of your own {own_label} contentions with evidence.\n"
+            f"Do NOT just ask questions — make a positive case {case_direction} the motion. "
             f"After your speech, add a brief 'COACH NOTE:' (1-2 sentences) pointing out the single biggest weakness in the user's argument."
         )
         sources_text = self._format_sources_for_prompt(sources)

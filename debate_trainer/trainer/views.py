@@ -67,6 +67,12 @@ def start_debate(request: HttpRequest) -> JsonResponse:
     if error:
         return error
 
+    # Determine sides: the AI always takes the side OPPOSITE the user
+    user_side = (payload.get("user_side") or "negative").strip().lower()
+    if user_side not in {"affirmative", "negative"}:
+        user_side = "negative"
+    ai_side = "negative" if user_side == "affirmative" else "affirmative"
+
     # Create a unique session ID
     session_id = str(uuid.uuid4())
 
@@ -91,10 +97,11 @@ def start_debate(request: HttpRequest) -> JsonResponse:
         # Generate AI's opening position with sources
         agent = from_settings(settings)
         ai_position_result = agent.generate_opening_position(
-            topic, 
-            research_summary, 
+            topic,
+            research_summary,
             difficulty,
-            sources=reference_sources
+            sources=reference_sources,
+            ai_side=ai_side
         )
         
         # Handle both old string return and new dict return for backwards compatibility
@@ -125,8 +132,9 @@ def start_debate(request: HttpRequest) -> JsonResponse:
             ],
         )
         
-        # Store reference sources in the session for later use
+        # Store reference sources and the user's chosen side for later rounds
         debate_round.research_summary["reference_sources"] = reference_sources
+        debate_round.research_summary["user_side"] = user_side
         debate_round.save()
 
         logger.info(f"Started debate session {session_id} for user {user_name} on topic {topic}")
@@ -216,8 +224,10 @@ def submit_user_response(request: HttpRequest) -> JsonResponse:
             "detailed_analysis": detailed_analysis,
         })
 
-        # Get reference sources from the session
+        # Get reference sources and the user's side from the session
         reference_sources = debate_round.research_summary.get("reference_sources", [])
+        user_side = debate_round.research_summary.get("user_side", "negative")
+        ai_side = "negative" if user_side == "affirmative" else "affirmative"
 
         # Generate AI counter-argument with sources
         agent = from_settings(settings)
@@ -227,7 +237,8 @@ def submit_user_response(request: HttpRequest) -> JsonResponse:
             user_response,
             current_round,
             debate_round.difficulty,
-            sources=reference_sources
+            sources=reference_sources,
+            ai_side=ai_side
         )
 
         # Get feedback on user's argument
