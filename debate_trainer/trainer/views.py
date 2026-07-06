@@ -97,9 +97,7 @@ def home_view(request: HttpRequest) -> HttpResponse:
     return HttpResponse(html_content)
 
 
-# ============================================================================
 # Multi-turn Debate Flow Endpoints (Core API)
-# ============================================================================
 
 @csrf_exempt
 @require_http_methods(["POST"])
