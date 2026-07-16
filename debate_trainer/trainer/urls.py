@@ -2,8 +2,6 @@ from django.urls import path
 
 from .views import (
     home_view,
-    debate_chat_view,
-    formal_debate_basic_view,
     formal_debate_enhanced_view,
     start_debate,
     submit_user_response,
@@ -40,7 +38,6 @@ urlpatterns = [
     
     # Formal debate competition interface (enhanced is default)
     path("formal/", formal_debate_enhanced_view, name="formal_debate"),
-    path("formal/basic/", formal_debate_basic_view, name="formal_debate_basic"),
     path("formal/create/", create_formal_debate, name="create_formal_debate"),
     path("formal/start/", start_formal_debate, name="start_formal_debate"),
     path("formal/speech/", submit_formal_speech, name="submit_formal_speech"),

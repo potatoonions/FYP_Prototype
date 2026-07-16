@@ -1,0 +1,142 @@
+<svg viewBox="0 0 1240 880" xmlns="http://www.w3.org/2000/svg" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444444"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1240" height="880" fill="#ffffff"/>
+  <text x="620" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#222222">AI Debate Trainer — System Architecture</text>
+
+  <!-- ================= CLIENT LAYER ================= -->
+  <rect x="40" y="48" width="1160" height="112" rx="8" fill="#E8F1FB" stroke="#5B8FC9" stroke-width="1.5"/>
+  <text x="60" y="74" font-size="13" font-weight="bold" fill="#2C5F94">CLIENT LAYER — WEB BROWSER (HTML / CSS / JavaScript)</text>
+
+  <rect x="70" y="90" width="330" height="54" rx="5" fill="#ffffff" stroke="#5B8FC9"/>
+  <text x="235" y="112" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#333333">Home / Navigation</text>
+  <text x="235" y="130" text-anchor="middle" font-size="11" fill="#555555">(home.html)</text>
+
+  <rect x="455" y="90" width="330" height="54" rx="5" fill="#ffffff" stroke="#5B8FC9"/>
+  <text x="620" y="112" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#333333">Casual Debate Chat UI</text>
+  <text x="620" y="130" text-anchor="middle" font-size="11" fill="#555555">(debate_chat.html)</text>
+
+  <rect x="840" y="90" width="330" height="54" rx="5" fill="#ffffff" stroke="#5B8FC9"/>
+  <text x="1005" y="112" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#333333">Formal Debate UI</text>
+  <text x="1005" y="130" text-anchor="middle" font-size="10" fill="#555555">(formal_debate.html · formal_debate_enhanced.html)</text>
+
+  <!-- client <-> django arrows -->
+  <line x1="595" y1="162" x2="595" y2="206" stroke="#444444" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="645" y1="206" x2="645" y2="162" stroke="#444444" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="585" y="188" text-anchor="end" font-size="10.5" fill="#444444">HTTP request (fetch)</text>
+  <text x="655" y="188" font-size="10.5" fill="#444444">JSON response</text>
+
+  <!-- ================= DJANGO LAYER ================= -->
+  <rect x="40" y="210" width="1160" height="230" rx="8" fill="#FDF6E7" stroke="#C9962E" stroke-width="1.5"/>
+  <text x="60" y="236" font-size="13" font-weight="bold" fill="#8A6614">DJANGO APPLICATION LAYER (trainer app)</text>
+
+  <rect x="70" y="248" width="1100" height="34" rx="5" fill="#ffffff" stroke="#C9962E"/>
+  <text x="620" y="270" text-anchor="middle" font-size="12" font-weight="bold" fill="#333333">URL Router (urls.py) — maps 22 REST-style endpoints to view functions</text>
+
+  <line x1="197" y1="284" x2="197" y2="298" stroke="#444444" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="477" y1="284" x2="477" y2="298" stroke="#444444" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="762" y1="284" x2="762" y2="298" stroke="#444444" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="1042" y1="284" x2="1042" y2="298" stroke="#444444" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <rect x="70" y="300" width="255" height="66" rx="5" fill="#ffffff" stroke="#C9962E"/>
+  <text x="197" y="320" text-anchor="middle" font-size="12" font-weight="bold" fill="#333333">Page Views</text>
+  <text x="197" y="336" text-anchor="middle" font-size="10.5" fill="#555555">(views.py)</text>
+  <text x="197" y="352" text-anchor="middle" font-size="10.5" fill="#555555">renders the four HTML templates</text>
+
+  <rect x="345" y="300" width="265" height="66" rx="5" fill="#ffffff" stroke="#C9962E"/>
+  <text x="477" y="320" text-anchor="middle" font-size="12" font-weight="bold" fill="#333333">Core Debate API (views.py)</text>
+  <text x="477" y="336" text-anchor="middle" font-size="10.5" fill="#555555">/debate/ start · response ·</text>
+  <text x="477" y="352" text-anchor="middle" font-size="10.5" fill="#555555">end · history</text>
+
+  <rect x="630" y="300" width="265" height="66" rx="5" fill="#ffffff" stroke="#C9962E"/>
+  <text x="762" y="320" text-anchor="middle" font-size="12" font-weight="bold" fill="#333333">Formal Debate API</text>
+  <text x="762" y="336" text-anchor="middle" font-size="10.5" fill="#555555">(formal_debate_api.py)</text>
+  <text x="762" y="352" text-anchor="middle" font-size="10.5" fill="#555555">/formal/ create · start · speech · status</text>
+
+  <rect x="915" y="300" width="255" height="66" rx="5" fill="#ffffff" stroke="#C9962E"/>
+  <text x="1042" y="318" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#333333">Gamification &amp; Analytics API</text>
+  <text x="1042" y="334" text-anchor="middle" font-size="10" fill="#555555">(gamification_api.py)</text>
+  <text x="1042" y="348" text-anchor="middle" font-size="9.5" fill="#555555">profile · XP · leaderboard · analytics</text>
+  <text x="1042" y="360" text-anchor="middle" font-size="9.5" fill="#555555">session replay · suggestions</text>
+
+  <rect x="70" y="384" width="1100" height="38" rx="5" fill="#ffffff" stroke="#C9962E" stroke-dasharray="4 3"/>
+  <text x="620" y="408" text-anchor="middle" font-size="11" fill="#555555">Cross-cutting: input validation (validators.py) · rate limiting (rate_limit.py) · CSRF protection · session management</text>
+
+  <!-- django <-> service arrows -->
+  <line x1="595" y1="442" x2="595" y2="486" stroke="#444444" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="645" y1="486" x2="645" y2="442" stroke="#444444" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="585" y="468" text-anchor="end" font-size="10.5" fill="#444444">service calls</text>
+  <text x="655" y="468" font-size="10.5" fill="#444444">analysis results</text>
+
+  <!-- ================= SERVICE LAYER ================= -->
+  <rect x="40" y="490" width="1160" height="180" rx="8" fill="#EAF7EE" stroke="#4CAF6E" stroke-width="1.5"/>
+  <text x="60" y="516" font-size="13" font-weight="bold" fill="#2E7D4F">SERVICE LAYER (_services_core.py)</text>
+
+  <rect x="70" y="526" width="310" height="120" rx="5" fill="#ffffff" stroke="#4CAF6E"/>
+  <text x="225" y="548" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#333333">Hybrid Argument Analysis</text>
+  <text x="225" y="568" text-anchor="middle" font-size="10.5" fill="#555555">rule-based detection: fallacies,</text>
+  <text x="225" y="584" text-anchor="middle" font-size="10.5" fill="#555555">weak arguments, unsupported claims</text>
+  <text x="225" y="600" text-anchor="middle" font-size="10.5" fill="#555555">+ DistilBERT quality classification</text>
+  <text x="225" y="616" text-anchor="middle" font-size="10.5" fill="#555555">→ combined argument score</text>
+
+  <rect x="400" y="526" width="310" height="120" rx="5" fill="#ffffff" stroke="#4CAF6E"/>
+  <text x="555" y="548" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#333333">AgenticDebateAgent</text>
+  <text x="555" y="568" text-anchor="middle" font-size="10.5" fill="#555555">provider-agnostic LLM client</text>
+  <text x="555" y="584" text-anchor="middle" font-size="10.5" fill="#555555">counterargument generation</text>
+  <text x="555" y="600" text-anchor="middle" font-size="10.5" fill="#555555">difficulty adaptation</text>
+  <text x="555" y="616" text-anchor="middle" font-size="10.5" fill="#555555">argument issue analysis</text>
+
+  <line x1="712" y1="586" x2="728" y2="586" stroke="#444444" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <rect x="730" y="526" width="220" height="120" rx="5" fill="#ffffff" stroke="#4CAF6E"/>
+  <text x="840" y="548" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#333333">ScholarResearcher</text>
+  <text x="840" y="568" text-anchor="middle" font-size="10.5" fill="#555555">research context and</text>
+  <text x="840" y="584" text-anchor="middle" font-size="10.5" fill="#555555">reference sources for</text>
+  <text x="840" y="600" text-anchor="middle" font-size="10.5" fill="#555555">evidence-based replies</text>
+
+  <rect x="970" y="526" width="200" height="120" rx="5" fill="#ffffff" stroke="#4CAF6E"/>
+  <text x="1070" y="548" text-anchor="middle" font-size="12" font-weight="bold" fill="#333333">DebateFlowEngine</text>
+  <text x="1070" y="564" text-anchor="middle" font-size="12" font-weight="bold" fill="#333333">&amp; SpeechAnalyzer</text>
+  <text x="1070" y="584" text-anchor="middle" font-size="10.5" fill="#555555">formal debate structure</text>
+  <text x="1070" y="600" text-anchor="middle" font-size="10.5" fill="#555555">timing · POIs</text>
+  <text x="1070" y="616" text-anchor="middle" font-size="10.5" fill="#555555">formality analysis</text>
+
+  <!-- service -> bottom arrows -->
+  <line x1="225" y1="648" x2="222" y2="706" stroke="#444444" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="238" y="682" font-size="10.5" fill="#444444">inference</text>
+
+  <line x1="540" y1="648" x2="580" y2="706" stroke="#444444" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="640" y1="706" x2="600" y2="648" stroke="#444444" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="530" y="682" text-anchor="end" font-size="10.5" fill="#444444">prompt (HTTPS)</text>
+  <text x="650" y="682" font-size="10.5" fill="#444444">generated reply</text>
+
+  <line x1="1065" y1="648" x2="1020" y2="706" stroke="#444444" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="1075" y="682" font-size="10.5" fill="#444444">ORM reads / writes</text>
+
+  <!-- ================= BOTTOM BANDS ================= -->
+  <rect x="40" y="710" width="360" height="150" rx="8" fill="#F1ECFA" stroke="#7E5FC0" stroke-width="1.5"/>
+  <text x="60" y="734" font-size="13" font-weight="bold" fill="#563D91">ML SUBSYSTEM (trainer/ml)</text>
+  <text x="220" y="760" text-anchor="middle" font-size="12" font-weight="bold" fill="#333333">DistilBERT ArgumentQualityClassifier</text>
+  <text x="220" y="778" text-anchor="middle" font-size="10.5" fill="#555555">(PyTorch + HuggingFace Transformers)</text>
+  <text x="220" y="794" text-anchor="middle" font-size="10.5" fill="#555555">weak / medium / strong + quality score 0–1</text>
+  <text x="220" y="818" text-anchor="middle" font-size="10.5" fill="#555555">argument_classifier.pt — fine-tuned offline</text>
+  <text x="220" y="834" text-anchor="middle" font-size="10.5" fill="#555555">(train.py · argument_dataset.csv)</text>
+
+  <rect x="440" y="710" width="340" height="150" rx="8" fill="#FDECEC" stroke="#C05555" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="460" y="734" font-size="13" font-weight="bold" fill="#963939">EXTERNAL SERVICES</text>
+  <text x="610" y="762" text-anchor="middle" font-size="12" font-weight="bold" fill="#333333">LLM Provider APIs</text>
+  <text x="610" y="782" text-anchor="middle" font-size="10.5" fill="#555555">OpenAI · Google Gemini · Groq</text>
+  <text x="610" y="798" text-anchor="middle" font-size="10.5" fill="#555555">counterargument &amp; feedback generation</text>
+  <text x="610" y="814" text-anchor="middle" font-size="10.5" fill="#555555">(HTTPS / JSON)</text>
+
+  <rect x="820" y="710" width="380" height="150" rx="8" fill="#F2F2F2" stroke="#7A7A7A" stroke-width="1.5"/>
+  <text x="840" y="734" font-size="13" font-weight="bold" fill="#4A4A4A">DATA LAYER</text>
+  <text x="1010" y="762" text-anchor="middle" font-size="12" font-weight="bold" fill="#333333">Django ORM → SQLite (db.sqlite3)</text>
+  <text x="1010" y="782" text-anchor="middle" font-size="10.5" fill="#555555">DebateSession · DebateRound</text>
+  <text x="1010" y="798" text-anchor="middle" font-size="10.5" fill="#555555">FormalDebateSession · FormalDebateConfig</text>
+  <text x="1010" y="814" text-anchor="middle" font-size="10.5" fill="#555555">UserProfile (XP, streaks, skill scores)</text>
+</svg>
