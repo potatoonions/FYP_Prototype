@@ -132,6 +132,11 @@
 <script>
     let currentSession = null;
     let debateConfig = null;
+    let userSide = 'affirmative';
+    let currentSpeechType = 'substantive';
+    let timerInterval = null;
+    let timeRemaining = 0;
+    let speechStartedAt = null;
 
     function showError(msg) {
         const el = document.getElementById('errorDiv');
@@ -144,11 +149,42 @@
         document.getElementById('loadingState').classList.toggle('active', show);
     }
 
+    function formatTime(secs) {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    function startTimer(seconds) {
+        clearInterval(timerInterval);
+        timeRemaining = seconds;
+        speechStartedAt = Date.now();
+        document.getElementById('timer').classList.remove('warning');
+        document.getElementById('timeDisplay').textContent = formatTime(timeRemaining);
+        timerInterval = setInterval(() => {
+            timeRemaining--;
+            if (timeRemaining <= 30) document.getElementById('timer').classList.add('warning');
+            if (timeRemaining <= 0) {
+                timeRemaining = 0;
+                clearInterval(timerInterval);
+            }
+            document.getElementById('timeDisplay').textContent = formatTime(timeRemaining);
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+    }
+
+    function elapsedSeconds() {
+        return speechStartedAt ? Math.round((Date.now() - speechStartedAt) / 1000) : 0;
+    }
+
     async function startDebate(e) {
         e.preventDefault();
         const motion = document.getElementById('motion').value.trim();
         const userName = document.getElementById('userName').value || 'Anonymous';
-        const userSide = document.getElementById('userSide').value;
+        userSide = document.getElementById('userSide').value;
 
         try {
             setLoading(true);
@@ -181,10 +217,14 @@
             if (!startRes.ok) throw new Error('Failed to start debate');
             const startData = await startRes.json();
 
-            addSpeechToHistory('ai', startData.current_speaker_side, 'substantive', startData.ai_opening_speech);
+            if (startData.ai_opening_speech) {
+                const aiSide = userSide === 'affirmative' ? 'negative' : 'affirmative';
+                addSpeechToHistory('ai', aiSide, 'substantive', startData.ai_opening_speech);
+            }
             document.getElementById('setupSection').style.display = 'none';
             document.getElementById('debateSection').style.display = 'block';
-            updateDebateStatus();
+            document.getElementById('statusDisplay').textContent = 'In Progress';
+            beginUserTurn(startData.next_speech_type, startData.timing.speech_duration_seconds);
         } catch (err) {
             showError('Error starting debate: ' + err.message);
         } finally {
@@ -202,10 +242,12 @@
         h.scrollTop = h.scrollHeight;
     }
 
-    function updateDebateStatus() {
+    function beginUserTurn(speechType, durationSeconds) {
+        currentSpeechType = speechType || 'substantive';
+        const minutes = Math.round(durationSeconds / 60);
         document.getElementById('speakerTurn').innerHTML = `
             <div style="font-weight: 700; margin-bottom: 6px;">Your Turn to Speak</div>
-            <div style="font-size: 0.88em; color: var(--grey);">Prepare your substantive speech (${debateConfig.timing.substantive_seconds / 60} minutes)</div>
+            <div style="font-size: 0.88em; color: var(--grey);">Prepare your ${currentSpeechType} speech (${minutes} minute${minutes === 1 ? '' : 's'})</div>
         `;
         document.getElementById('inputSection').innerHTML = `
             <div class="form-group">
@@ -214,23 +256,30 @@
             </div>
             <button class="btn btn-primary" onclick="submitSpeech()">Submit Speech</button>
         `;
+        startTimer(durationSeconds);
     }
 
     async function submitSpeech() {
         const speech = document.getElementById('userSpeech').value.trim();
         if (!speech) { showError('Please enter your speech'); return; }
+        const timeTaken = elapsedSeconds();
         setLoading(true);
         try {
             const res = await fetch('/api/formal/speech/', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: currentSession, speech, time_taken: 300, pois_received: [] })
+                body: JSON.stringify({ session_id: currentSession, speech, time_taken: timeTaken, pois_received: [] })
             });
             if (!res.ok) throw new Error('Failed to submit speech');
             const data = await res.json();
+            stopTimer();
 
-            addSpeechToHistory('user', 'user', 'substantive', speech);
+            addSpeechToHistory('user', userSide, currentSpeechType, speech);
+            (data.ai_speeches || []).forEach(s => addSpeechToHistory('ai', s.side, s.type, s.content));
 
             if (data.status === 'completed') {
+                document.getElementById('statusDisplay').textContent = 'Completed';
+                document.getElementById('timeDisplay').textContent = '0:00';
+                document.getElementById('speakerTurn').innerHTML = '<div style="font-weight: 700;">Debate Completed</div>';
                 document.getElementById('inputSection').innerHTML = `
                     <div class="card" style="text-align: center; padding: 24px;">
                         <h2 style="margin-bottom: 12px;">Debate Completed</h2>
@@ -239,8 +288,7 @@
                         <button class="btn btn-primary" style="margin-top: 16px;" onclick="location.reload()">Start New Debate</button>
                     </div>`;
             } else {
-                addSpeechToHistory('ai', data.next_speaker_side, data.next_speech_type, data.ai_speech);
-                updateDebateStatus();
+                beginUserTurn(data.next_speech_type, data.next_speech_duration_seconds);
             }
 
             document.getElementById('userScore').textContent = Math.round(data.current_scores.user_score);

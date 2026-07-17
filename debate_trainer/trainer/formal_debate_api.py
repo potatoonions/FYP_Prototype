@@ -136,48 +136,61 @@ def start_formal_debate(request):
         # Get AI agent
         from django.conf import settings
         agent = from_settings(settings)
-        
-        # Generate opening speech for AI
-        current_speech_info = session.config.get_speech_order()[0]
-        ai_speaker_side = current_speech_info["side"]
-        
-        # AI gives first speech
-        opening_speech = agent.generate_formal_speech(
-            motion=session.config.motion,
-            side=ai_speaker_side,
-            speech_type="substantive",
-            difficulty="medium"
-        )
-        
-        # Update session
+
+        speech_order = session.config.get_speech_order()
+        first_speech_info = speech_order[0]
+
         session.status = "in_progress"
         session.started_at = timezone.now()
-        session.speeches.append({
-            "speaker": "ai",
-            "side": ai_speaker_side,
-            "type": "substantive",
-            "content": opening_speech,
-            "time_taken": 0,
-            "pois_received": [],
-            "timestamp": timezone.now().isoformat()
-        })
-        session.current_speaker_index = 0
+
+        # AI only opens the debate when the first speech belongs to its side
+        opening_speech = None
+        if first_speech_info["side"] == session.ai_side:
+            opening_speech = agent.generate_formal_speech(
+                motion=session.config.motion,
+                side=session.ai_side,
+                speech_type=first_speech_info["type"],
+                difficulty="medium"
+            )
+            session.speeches.append({
+                "speaker": "ai",
+                "side": session.ai_side,
+                "type": first_speech_info["type"],
+                "content": opening_speech,
+                "time_taken": 0,
+                "pois_received": [],
+                "timestamp": timezone.now().isoformat()
+            })
+            session.current_speaker_index = 1
+        else:
+            session.current_speaker_index = 0
         session.save()
-        
+
+        next_speech_info = speech_order[session.current_speaker_index]
+        next_duration = (
+            session.config.substantive_speech_time
+            if next_speech_info["type"] == "substantive"
+            else session.config.reply_speech_time
+        )
+
         logger.info(f"Started formal debate session {session_id}")
-        
+
         return JsonResponse({
             "session_id": session_id,
             "status": "in_progress",
-            "current_speaker": "ai",
-            "current_speaker_side": ai_speaker_side,
             "ai_opening_speech": opening_speech,
-            "timing": {
-                "speech_duration_seconds": session.config.substantive_speech_time,
-                "speech_duration_readable": f"{session.config.substantive_speech_time // 60} minutes"
-            },
             "next_speaker": "user",
-            "message": "AI has delivered opening speech. Prepare your response."
+            "next_speaker_side": session.user_side,
+            "next_speech_type": next_speech_info["type"],
+            "timing": {
+                "speech_duration_seconds": next_duration,
+                "speech_duration_readable": f"{next_duration // 60} minutes"
+            },
+            "message": (
+                "AI has delivered opening speech. Prepare your response."
+                if opening_speech
+                else "You are the first speaker. Deliver your opening speech."
+            )
         })
     
     except Exception as e:
@@ -249,7 +262,11 @@ def submit_formal_speech(request):
         validation = session.config.validate_new_arguments(current_speech_info["type"], speech_text)
         
         # Record user speech
+        # Normalize the ML score to the 0-100 scale used by formality and AI
+        # evaluation scores (the ML combined_score is on a 0-1 scale).
         ml_score = ml_analysis.get("combined_score", formality["formality_score"])
+        if ml_score <= 1.0:
+            ml_score = ml_score * 100
         user_speech_record = {
             "speaker": "user",
             "side": session.user_side,
@@ -270,63 +287,42 @@ def submit_formal_speech(request):
         
         # Move to next speech
         session.current_speaker_index += 1
-        
-        # Check if debate is complete
-        if session.current_speaker_index >= len(speech_order):
-            session.status = "completed"
-            session.ended_at = timezone.now()
-            session.save()
-            
-            return JsonResponse({
-                "session_id": session_id,
-                "status": "completed",
-                "message": "Debate completed!",
-                "scores": {
-                    "user_score": round(session.user_score, 1),
-                    "ai_score": round(session.ai_score, 1)
-                },
-                "user_speech_feedback": {
-                    "formality": formality,
-                    "ml_analysis": ml_analysis,
-                    "validation": validation,
-                    "time_used": time_taken
-                }
-            })
-        
-        # Get next speech info
-        next_speech_info = speech_order[session.current_speaker_index]
-        next_speaker_side = next_speech_info["side"]
-        is_user_next = next_speaker_side == session.user_side
-        
-        # Generate AI speech if it's AI's turn
-        ai_speech = ""
-        if not is_user_next:
+
+        # Generate AI speeches until it is the user's turn again or the debate
+        # ends. This handles consecutive AI speeches (e.g. the AI's final
+        # substantive speech followed immediately by the AI's reply speech).
+        ai_speeches = []
+        while session.current_speaker_index < len(speech_order):
+            next_speech_info = speech_order[session.current_speaker_index]
+            if next_speech_info["side"] == session.user_side:
+                break
+
             # Get opponent's most recent speech for context
             opponent_speeches = [s["content"] for s in session.speeches if s["speaker"] != "ai"]
             opponent_context = opponent_speeches[-1] if opponent_speeches else ""
-            
+
             ai_speech = agent.generate_formal_speech(
                 motion=session.config.motion,
-                side=next_speaker_side,
+                side=next_speech_info["side"],
                 speech_type=next_speech_info["type"],
                 previous_speeches=session.speeches,
                 opponent_position=opponent_context,
                 difficulty="medium"
             )
-            
+
             # Evaluate the speech
             ai_eval = agent.evaluate_formal_speech(
                 ai_speech,
                 next_speech_info["type"],
-                next_speaker_side,
+                next_speech_info["side"],
                 opponent_context
             )
             session.ai_score += ai_eval["score"] * 0.5
-            
+
             # Record AI speech
             session.speeches.append({
                 "speaker": "ai",
-                "side": next_speaker_side,
+                "side": next_speech_info["side"],
                 "type": next_speech_info["type"],
                 "content": ai_speech,
                 "time_taken": 0,
@@ -334,38 +330,61 @@ def submit_formal_speech(request):
                 "timestamp": timezone.now().isoformat(),
                 "evaluation": ai_eval
             })
-            
+            ai_speeches.append({
+                "content": ai_speech,
+                "side": next_speech_info["side"],
+                "type": next_speech_info["type"]
+            })
+
             session.current_speaker_index += 1
-        
+
+        # Check if debate is complete
+        is_completed = session.current_speaker_index >= len(speech_order)
+        if is_completed:
+            session.status = "completed"
+            session.ended_at = timezone.now()
         session.save()
-        
+
         # Prepare response
-        progress = session.config.get_speech_order()
-        current_progress = (session.current_speaker_index / len(progress)) * 100
-        
-        return JsonResponse({
+        current_progress = (session.current_speaker_index / len(speech_order)) * 100
+
+        response = {
             "session_id": session_id,
-            "status": "in_progress",
+            "status": session.status,
+            "ai_speeches": ai_speeches,
             "user_speech_feedback": {
                 "formality": formality,
                 "ml_analysis": ml_analysis,
                 "validation": validation,
                 "time_used": time_taken
             },
-            "next_speaker": "user" if is_user_next else "ai",
-            "next_speaker_side": next_speaker_side if is_user_next else session.ai_side,
-            "next_speech_type": next_speech_info["type"],
-            "ai_speech": ai_speech if not is_user_next else None,
             "progress": {
                 "completed_speeches": session.current_speaker_index,
-                "total_speeches": len(progress),
+                "total_speeches": len(speech_order),
                 "percent_complete": round(current_progress, 1)
             },
             "current_scores": {
                 "user_score": round(session.user_score, 1),
                 "ai_score": round(session.ai_score, 1)
             }
-        })
+        }
+
+        if is_completed:
+            response["message"] = "Debate completed!"
+            response["scores"] = response["current_scores"]
+        else:
+            next_speech_info = speech_order[session.current_speaker_index]
+            next_duration = (
+                session.config.substantive_speech_time
+                if next_speech_info["type"] == "substantive"
+                else session.config.reply_speech_time
+            )
+            response["next_speaker"] = "user"
+            response["next_speaker_side"] = session.user_side
+            response["next_speech_type"] = next_speech_info["type"]
+            response["next_speech_duration_seconds"] = next_duration
+
+        return JsonResponse(response)
     
     except Exception as e:
         logger.error(f"Error submitting formal speech: {str(e)}", exc_info=True)

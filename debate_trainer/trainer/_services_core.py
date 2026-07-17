@@ -465,7 +465,7 @@ def analyze_argument_with_ml(text: str, use_ml: bool = True) -> Dict:
                 {
                     "type": issue.issue_type,
                     "description": issue.description,
-                    "text": issue.text_snippet,
+                    "text": issue.matched_text,
                     "severity": issue.severity,
                     "suggestion": issue.suggestion,
                 }
@@ -838,7 +838,8 @@ class AgenticDebateAgent:
             prev_speeches_text = ""
             if previous_speeches:
                 for speech in previous_speeches[-2:]:
-                    prev_speeches_text += f"\n{speech['side'].upper()}: {speech['text'][:300]}..."
+                    speech_content = speech.get("content") or speech.get("text") or ""
+                    prev_speeches_text += f"\n{speech['side'].upper()}: {speech_content[:300]}..."
             prompt = f"Motion: {motion}\nYour side: {side.upper()}\nOpponent's position: {opponent_position or 'See previous speeches'}\nPrevious speeches:{prev_speeches_text}\n\nDeliver your reply speech attacking opponent's points."
         else:
             return ""
