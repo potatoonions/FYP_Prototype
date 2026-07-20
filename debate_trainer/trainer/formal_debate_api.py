@@ -31,12 +31,18 @@ def create_formal_debate(request):
         return error
     
     try:
-        # Parse motion
-        motion, error = validate_string_field(payload.get("motion"), "motion", required=True)
+        # Parse motion (same rules as the casual debate topic)
+        motion, error = validate_string_field(
+            payload.get("motion"), "motion", required=True, min_length=3, max_length=255
+        )
         if error:
             return error
-        
-        user_name, error = validate_string_field(payload.get("user_name"), "user_name", required=False)
+
+        user_name, error = validate_string_field(
+            payload.get("user_name"), "user_name", required=False, max_length=100
+        )
+        if error:
+            return error
         user_name = user_name or "Anonymous"
         
         # Parse config
@@ -209,7 +215,9 @@ def submit_formal_speech(request):
     
     try:
         session_id = payload.get("session_id")
-        speech_text, error = validate_string_field(payload.get("speech"), "speech", required=True)
+        speech_text, error = validate_string_field(
+            payload.get("speech"), "speech", required=True, min_length=10, max_length=5000
+        )
         if error:
             return error
         
